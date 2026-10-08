@@ -3,11 +3,12 @@ import { getDef } from './catalog';
 import type { Sim } from './sim';
 import type { Building } from './types';
 import { isActive } from './util';
+import { closestParam, curveTangent } from './tracks/geom';
 
 /** Max commute (road tiles) before a trip counts as "unreachable". */
 export const MAX_COMMUTE = 45;
 /** Commute cost of one road tile. Highways and subways are cheaper per tile. */
-export const COMMUTE_STEP = 4;
+export const COMMUTE_STEP = 16;
 /** Max commute as a cost. */
 export const MAX_COMMUTE_COST = MAX_COMMUTE * COMMUTE_STEP;
 
@@ -15,9 +16,9 @@ export const MAX_COMMUTE_COST = MAX_COMMUTE * COMMUTE_STEP;
 const COST = {
   road: COMMUTE_STEP,
   /** Highways are four times as fast as streets. */
-  highway: 1,
+  highway: COMMUTE_STEP / 4,
   /** Subway trains are fast too, but riders wait at the station. */
-  subway: 1,
+  subway: COMMUTE_STEP / 4,
   ramp: COMMUTE_STEP,
   station: COMMUTE_STEP * 2,
   /** Neighbour cities as distant job / worker pools. */
@@ -34,6 +35,37 @@ const HIGHWAY_CAPACITY = 3.5;
 /** Graph layers: node = tile index + layer × world size. */
 const LAYER_FLAGS = [NET.ROAD, NET.HIGHWAY, NET.SUBWAY];
 const LAYER_COSTS = [COST.road, COST.highway, COST.subway];
+
+const stepCache = new WeakMap<Sim, { versions: string; costs: Uint8Array[] }>();
+
+/**
+ * Commute cost of leaving each tile, per layer. Track at an angle covers a
+ * staircase of tiles that commuters cross one side at a time, so its tiles
+ * cost less: a trip along it costs what its real length would.
+ */
+function stepCosts(sim: Sim): Uint8Array[] {
+  const w = sim.world;
+  const nets = [w.tracks.road, w.tracks.highway];
+  const versions = nets.map((n) => n.version).join(',');
+  const cached = stepCache.get(sim);
+  if (cached && cached.versions === versions && cached.costs[0].length === w.size) return cached.costs;
+  const costs = LAYER_COSTS.map((c) => new Uint8Array(w.size).fill(c));
+  nets.forEach((net, layer) => {
+    const base = LAYER_COSTS[layer];
+    for (const e of net.edges.values()) {
+      const q = net.curve(e);
+      if (!e.curved && (q.ax === q.bx || q.ay === q.by)) continue;
+      for (const i of net.tilesOf(-e.id)) {
+        const [t] = closestParam(q, (i % w.w) + 0.5, Math.floor(i / w.w) + 0.5);
+        const [dx, dy] = curveTangent(q, t);
+        const c = Math.max(1, Math.round(base / (Math.abs(dx) + Math.abs(dy))));
+        if (c < costs[layer][i]) costs[layer][i] = c;
+      }
+    }
+  });
+  stepCache.set(sim, { versions, costs });
+  return costs;
+}
 
 export interface AccessData {
   /** Commute cost (COMMUTE_STEP per road tile) from each road tile to the nearest job site. */
@@ -110,6 +142,7 @@ function commuteSearch(
   const W = w.w;
   dist.fill(INF);
   parent.fill(-1);
+  const costs = stepCosts(sim);
   const buckets: number[][] = [];
   for (const [n, d0] of sources) {
     if (d0 < dist[n]) {
@@ -133,7 +166,7 @@ function commuteSearch(
       const layer = (n / size) | 0;
       const i = n - layer * size;
       const flag = LAYER_FLAGS[layer];
-      const step = d + LAYER_COSTS[layer];
+      const step = d + costs[layer][i];
       const x = i % W;
       const y = (i / W) | 0;
       const base = layer * size;

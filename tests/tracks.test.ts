@@ -10,6 +10,7 @@ import { World } from '../src/sim/world';
 import { generateMap } from '../src/sim/mapgen';
 import { Sim } from '../src/sim/sim';
 import { flatSim, road } from './helpers';
+import { COMMUTE_STEP, updateTraffic } from '../src/sim/traffic';
 
 const free = (ax: number, ay: number, bx: number, by: number, c: [number, number] | null = null): TrackShape => ({
   type: 'free',
@@ -189,6 +190,48 @@ describe('free-angle track', () => {
     expect(planTrack(sim, 'road', free(10.5, 5.5, 30.5, 15.5)).ok).toBe(true);
     expect(planTrack(sim, 'road', free(10.5, 25.5, 30.5, 25.5, [20.5, 32.5])).reason).toBe('Bridges must be straight');
     expect(planTrack(sim, 'road', free(10.5, 5.5, 20.5, 5.5)).reason).toBe('Bridges must end on land');
+  });
+});
+
+describe('commuting on free-angle roads', () => {
+  /** Commute cost from a house at one end of a road to a workshop at the other. */
+  function commute(build: (sim: Sim) => void): number {
+    const sim = flatSim();
+    sim.city.funds = 1e7;
+    build(sim);
+    const grow = (def: string, x: number, y: number, pop: number) =>
+      sim.world.addBuilding({
+        def,
+        x,
+        y,
+        w: 1,
+        h: 1,
+        rot: 0,
+        variant: 0,
+        seed: 0,
+        pop,
+        build: 0,
+        powered: true,
+        watered: true,
+        abandoned: false,
+        fire: 0,
+        age: 0,
+        unhappy: 0,
+      });
+    grow('R101_house', 9, 9, 10);
+    grow('I101_workshop', 41, 41, 20);
+    sim.recompute(true);
+    updateTraffic(sim);
+    return sim.access.jobDist[sim.world.nearestRoad[sim.world.idx(9, 9)]];
+  }
+
+  it('is shorter along a diagonal road than around a corner', () => {
+    const corner = commute((sim) => road(sim, 10, 10, 40, 40));
+    const diagonal = commute((sim) => build(sim, 'road', free(10.5, 10.5, 40.5, 40.5)));
+    // 60 tiles around the corner; about 30 × √2 ≈ 42 tiles along the diagonal
+    expect(corner).toBeGreaterThanOrEqual(58 * COMMUTE_STEP);
+    expect(diagonal).toBeLessThan(corner * 0.8);
+    expect(diagonal).toBeGreaterThan(36 * COMMUTE_STEP);
   });
 });
 
