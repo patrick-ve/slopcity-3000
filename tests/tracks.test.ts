@@ -108,6 +108,9 @@ describe('grid roads as track', () => {
     const sim = flatSim();
     const plan = planLine(sim, 'road', linePath(2, 2, 12, 2));
     expect(plan.cost).toBe(110);
+    // joining a road splits it, but only the new tiles cost money
+    road(sim, 2, 10, 20, 10);
+    expect(planLine(sim, 'road', linePath(8, 2, 8, 9)).cost).toBe(80);
   });
 });
 

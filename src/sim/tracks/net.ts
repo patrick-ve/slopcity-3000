@@ -115,8 +115,11 @@ export class TrackNet {
   readonly cover: Uint16Array;
   /** Bumped on every change (renderer, vehicles). */
   version = 0;
-  /** Tiles whose coverage switched on or off (consumed by World.syncTracks). */
-  flips = new Set<number>();
+  /**
+   * Tiles whose coverage may have switched on or off, with whether they were
+   * covered before (consumed by World.syncTracks; see changes()).
+   */
+  flips = new Map<number, boolean>();
   /** Tiles whose track geometry changed (redraw). */
   touched = new Set<number>();
 
@@ -370,7 +373,7 @@ export class TrackNet {
   trial<T>(edit: () => void, inspect: () => T): T {
     const flips = this.flips;
     const touched = this.touched;
-    this.flips = new Set();
+    this.flips = new Map();
     this.touched = new Set();
     this.begin();
     try {
@@ -571,6 +574,18 @@ export class TrackNet {
     return Int32Array.from(tiles).sort();
   }
 
+  /** Tiles that track newly covers (`on`) or no longer covers (`off`) since the flips were last cleared. */
+  changes(): { on: number[]; off: number[] } {
+    const on: number[] = [];
+    const off: number[] = [];
+    for (const [t, before] of this.flips) {
+      const now = this.cover[t] > 0;
+      if (now && !before) on.push(t);
+      else if (!now && before) off.push(t);
+    }
+    return { on, off };
+  }
+
   /** Tiles an element covers right now. */
   tilesOf(k: number): Int32Array {
     return this.foot.get(k) ?? new Int32Array(0);
@@ -584,7 +599,7 @@ export class TrackNet {
       const old = this.foot.get(k);
       if (old) {
         for (const t of old) {
-          if (--this.cover[t] === 0) this.flips.add(t);
+          if (--this.cover[t] === 0 && !this.flips.has(t)) this.flips.set(t, true);
           this.touched.add(t);
         }
       }
@@ -592,7 +607,7 @@ export class TrackNet {
       if (alive) {
         const tiles = this.footprint(k);
         for (const t of tiles) {
-          if (this.cover[t]++ === 0) this.flips.add(t);
+          if (this.cover[t]++ === 0 && !this.flips.has(t)) this.flips.set(t, false);
           this.touched.add(t);
         }
         this.foot.set(k, tiles);

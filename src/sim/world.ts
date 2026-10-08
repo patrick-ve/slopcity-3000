@@ -255,7 +255,7 @@ export class World {
       if (!net.flips.size && !net.touched.size) continue;
       changed = true;
       const flag = net.profile.flag;
-      for (const i of net.flips) {
+      for (const i of net.flips.keys()) {
         if (net.cover[i] > 0) {
           if (this.net[i] & flag) continue;
           this.net[i] |= flag;

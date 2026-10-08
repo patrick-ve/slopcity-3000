@@ -93,16 +93,15 @@ function inspect(sim: Sim, net: TrackNet, info: EditInfo, shape: TrackShape): In
   const seen = new Set<number>();
   let cost = 0;
   const [base, bridge] = PRICE[kind];
-  const fresh: number[] = [];
-  for (const i of net.flips) {
+  const { on: fresh, off: freed } = net.changes();
+  for (const i of freed) {
+    seen.add(i);
+    tiles.push({ x: i % w.w, y: (i / w.w) | 0, ok: true, change: true });
+  }
+  for (const i of fresh) {
     const x = i % w.w;
     const y = (i / w.w) | 0;
     seen.add(i);
-    if (net.cover[i] === 0) {
-      tiles.push({ x, y, ok: true, change: true });
-      continue;
-    }
-    fresh.push(i);
     let ok = true;
     const water = w.isWater(x, y);
     if (w.bld[i]) {
@@ -325,7 +324,7 @@ export function trackCut(sim: Sim, x0: number, y0: number, x1: number, y1: numbe
     net.trial(
       () => cut(net),
       () => {
-        for (const t of net.flips) if (net.cover[t] === 0) freed.add(t);
+        for (const t of net.changes().off) freed.add(t);
       },
     );
   }
