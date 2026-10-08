@@ -114,7 +114,6 @@ export class Disasters {
     }
   }
 
-  /** Start a disaster (optionally at a tile). */
   /** Start a disaster at (tx, ty), or at a random place; `strength` scales an earthquake. */
   trigger(kind: DisasterKind, tx?: number, ty?: number, strength = 1): void {
     const sim = this.sim;
