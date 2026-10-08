@@ -1,6 +1,7 @@
 import { NET, type Building } from '../sim/types';
 import { getDef } from '../sim/catalog';
 import { CHUNK, DIR_E, DIR_N, DIR_S, DIR_W, LEVEL_H, type World } from '../sim/world';
+import { closestParam } from '../sim/tracks/geom';
 import { landfillLevel } from '../sim/garbage';
 import { hashf } from '../util/rng';
 import { ObjectBuf, placePoint, rotPlacement, yawPlacement } from './buffers';
@@ -139,24 +140,51 @@ function addTrees(world: World, out: ObjectChunk, x: number, y: number, density:
   }
 }
 
+/** Spots a power pole may take in its tile: the middle, then beside the edges, then in the corners. */
+const POLE_SPOTS: [number, number][] = [
+  [0.5, 0.5],
+  [0.9, 0.5],
+  [0.5, 0.9],
+  [0.1, 0.5],
+  [0.5, 0.1],
+  [0.9, 0.9],
+  [0.1, 0.9],
+  [0.9, 0.1],
+  [0.1, 0.1],
+];
+
+/** Pole position: the tile centre, or the spot farthest from the roads, rails and highways crossing the tile. */
 function polePosition(world: World, x: number, y: number): [number, number, number] {
-  const i = world.idx(x, y);
-  const n = world.net[i];
+  const n = world.net[world.idx(x, y)];
   let px = x + 0.5;
   let pz = y + 0.5;
   if (n & (NET.ROAD | NET.RAIL | NET.HIGHWAY)) {
-    const flag = n & NET.ROAD ? NET.ROAD : n & NET.RAIL ? NET.RAIL : NET.HIGHWAY;
-    const m = world.netMask(x, y, flag);
-    const ns = (m & (DIR_N | DIR_S)) !== 0;
-    const ew = (m & (DIR_E | DIR_W)) !== 0;
-    if (ns && !ew) px = x + 0.9;
-    else if (ew && !ns) pz = y + 0.9;
-    else {
-      px = x + 0.9;
-      pz = y + 0.9;
+    let best = -Infinity;
+    for (const [ox, oz] of POLE_SPOTS) {
+      const d = trackClearance(world, x + ox, y + oz);
+      if (d > best + 1e-6) {
+        best = d;
+        px = x + ox;
+        pz = y + oz;
+      }
     }
   }
   return [px, world.surfaceY(px, pz), pz];
+}
+
+/** Distance from a point to the edge of the nearest road, rail or highway footprint (negative inside it). */
+function trackClearance(world: World, x: number, z: number): number {
+  let best = Infinity;
+  for (const net of [world.tracks.road, world.tracks.rail, world.tracks.highway]) {
+    const hw = net.profile.hw;
+    const near = net.query(x - 1.5, z - 1.5, x + 1.5, z + 1.5);
+    for (const id of near.edges) best = Math.min(best, closestParam(net.curve(net.edges.get(id)!), x, z)[1] - hw);
+    for (const id of near.nodes) {
+      const node = net.nodes.get(id)!;
+      if (net.degree(id) !== 1) best = Math.min(best, Math.hypot(node.x - x, node.y - z) - hw);
+    }
+  }
+  return best;
 }
 
 const POLE_TOP = 0.5;
