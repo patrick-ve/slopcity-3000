@@ -115,7 +115,8 @@ export class Disasters {
   }
 
   /** Start a disaster (optionally at a tile). */
-  trigger(kind: DisasterKind, tx?: number, ty?: number): void {
+  /** Start a disaster at (tx, ty), or at a random place; `strength` scales an earthquake. */
+  trigger(kind: DisasterKind, tx?: number, ty?: number, strength = 1): void {
     const sim = this.sim;
     const w = sim.world;
     const rx = tx ?? Math.floor(w.w * (0.25 + sim.rng.next() * 0.5));
@@ -139,14 +140,14 @@ export class Disasters {
         break;
       }
       case 'earthquake': {
-        const r = 10 + sim.rng.next() * 10;
+        const r = (10 + sim.rng.next() * 10) * strength;
         this.shake = 4;
         sim.events.emit('shake', 4);
         let hit = 0;
         for (const b of [...w.buildings.values()]) {
           const d = Math.hypot(b.x + b.w / 2 - rx, b.y + b.h / 2 - ry);
           if (d > r) continue;
-          const p = 0.4 * (1 - d / r);
+          const p = Math.min(0.9, 0.4 * strength * (1 - d / r));
           const roll = sim.rng.next();
           if (roll < p * 0.6) {
             this.destroy(b);

@@ -70,6 +70,8 @@ export interface ScenarioState {
   start: number;
   deadline: number;
   status: 'active' | 'won' | 'lost';
+  /** Goal targets fixed when the scenario started (some depend on the starting city). */
+  targets?: number[];
 }
 
 export type Speed = 0 | 1 | 2 | 3;

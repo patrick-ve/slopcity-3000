@@ -22,6 +22,7 @@ import {
   OrdinancesPanel,
   QueryPanel,
   SavePanel,
+  ScenarioPanel,
   type Panel,
 } from './panels';
 
@@ -41,6 +42,7 @@ export class UI {
   private flyoutCat: string | null = null;
   private catButtons = new Map<string, HTMLButtonElement>();
   private undoBtn!: HTMLButtonElement;
+  private scenarioBtn!: HTMLButtonElement;
   private statFunds!: HTMLDivElement;
   private statFundsDelta!: HTMLSpanElement;
   private statPop!: HTMLDivElement;
@@ -99,6 +101,7 @@ export class UI {
       options: new OptionsPanel(game, host),
       help: new HelpPanel(game, host),
       news: new NewsPanel(game, host),
+      scenario: new ScenarioPanel(game, host),
       query: this.query,
     };
     const track = (e: PointerEvent) => {
@@ -177,6 +180,8 @@ export class UI {
     const btn = (id: string, ic: string, title: string) =>
       h('button', { class: 'iconbtn', title, html: icon(ic), onclick: () => this.toggleWindow(id) });
     this.advisorBtn = btn('advisors', 'advisors', 'Advisors');
+    this.scenarioBtn = btn('scenario', 'flag', 'Scenario goals');
+    this.scenarioBtn.style.display = 'none';
     this.topbar = h(
       'div',
       { class: 'topbar glass' },
@@ -187,6 +192,7 @@ export class UI {
       h(
         'div',
         { class: 'tb-buttons' },
+        this.scenarioBtn,
         btn('budget', 'budget', 'Budget (taxes, funding, bonds)'),
         btn('ordinances', 'ordinances', 'Ordinances'),
         btn('graphs', 'graphs', 'City statistics'),
@@ -576,6 +582,7 @@ export class UI {
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
       this.hudTimer = 0.2;
+      this.scenarioBtn.style.display = sim.city.scenario ? '' : 'none';
       const last = this.game.undo.peek();
       this.undoBtn.disabled = !last;
       this.undoBtn.title = last ? `Undo: ${last.label} (Ctrl/Cmd + Z)` : 'Nothing to undo';
@@ -616,13 +623,14 @@ export class UI {
       this.minimap.draw(this.game.renderer.overlay);
     }
     if (this.panels.query.win.open && Math.random() < dt * 2) this.panels.query.refresh();
+    if (this.panels.scenario.win.open && Math.random() < dt) this.panels.scenario.refresh();
   }
 
   /** Called every simulated month. */
   onMonth(): void {
     const sim = this.game.sim;
     if (!sim) return;
-    for (const id of ['budget', 'graphs', 'advisors', 'neighbors', 'ordinances']) {
+    for (const id of ['budget', 'graphs', 'advisors', 'neighbors', 'ordinances', 'scenario']) {
       const p = this.panels[id];
       if (p.win.open) p.refresh();
     }

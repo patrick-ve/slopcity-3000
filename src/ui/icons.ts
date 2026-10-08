@@ -39,6 +39,7 @@ const P: Record<string, string> = {
   close: '<path d="M18 6 6 18M6 6l12 12"/>',
   rotate: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
   city: '<path d="M3 21h18"/><path d="M5 21V10l4-2v13"/><path d="M9 21V5l6-2v18"/><path d="M15 21V11l4 2v8"/>',
   highway: '<path d="M2 9h20"/><path d="M2 13h20"/><path d="M5 13v8M19 13v8"/><path d="M6 11h3M11 11h2M15 11h3"/>',
   subway:

@@ -11,3 +11,4 @@ export { OptionsPanel } from './options';
 export { OrdinancesPanel } from './ordinances';
 export { QueryPanel } from './query';
 export { SavePanel } from './save';
+export { ScenarioPanel } from './scenario';

@@ -18,6 +18,7 @@ import { applyPlan, linePath, planLine, planPlace, planZone, type LineKind } fro
 import type { ZoneKind } from '../sim/types';
 import { UndoStack } from '../sim/undo';
 import { buildStarter, getStarter } from '../sim/starters';
+import { buildScenario, getScenario, updateScenario } from '../sim/scenarios';
 
 export type Mode = 'menu' | 'play';
 
@@ -106,7 +107,10 @@ export class Game {
       }),
       ev.on('sound', (s) => this.sfx.play(s)),
       ev.on('shake', (s) => (this.renderer.cam.shake = s)),
-      ev.on('month', () => this.ui.onMonth()),
+      ev.on('month', () => {
+        this.checkScenario();
+        this.ui.onMonth();
+      }),
       ev.on('unlock', () => this.ui.onUnlock()),
       ev.on('building', (e) => {
         if (e.type === 'destroyed')
@@ -216,6 +220,56 @@ export class Game {
     } finally {
       this.building = false;
     }
+  }
+
+  /** Build a scenario's starting city (with progress) and play it. */
+  async playScenario(id: string, onProgress?: (p: number) => void): Promise<void> {
+    if (this.building) return;
+    this.building = true;
+    try {
+      const def = getScenario(id);
+      const gen = buildScenario(def);
+      let step = gen.next();
+      while (!step.done) {
+        onProgress?.(step.value);
+        await new Promise((res) => setTimeout(res, 0));
+        step = gen.next();
+      }
+      onProgress?.(1);
+      const sim = step.value;
+      this.beginPlay(sim);
+      this.focusCity(sim, sim.world.buildings.size ? 18 : 30);
+      def.onStart?.(sim);
+      sim.recompute(false);
+      this.ui.openWindow('scenario');
+      this.ui.pushNews(`Scenario: ${def.name}. ${def.brief}`, 'info');
+    } finally {
+      this.building = false;
+    }
+  }
+
+  /** Monthly scenario check: announce a win or a loss once. */
+  private checkScenario(): void {
+    const sim = this.sim;
+    if (!sim) return;
+    const result = updateScenario(sim);
+    if (!result) return;
+    const def = getScenario(sim.city.scenario!.id);
+    if (result === 'won') {
+      this.sfx.play('fanfare');
+      this.ui.toast(
+        { title: `${def.name}: you did it!`, text: 'Every goal is met. The city is yours to keep building.', kind: 'good' },
+        12000,
+      );
+      this.ui.pushNews(`Mayor completes the ${def.name} challenge!`, 'good');
+    } else {
+      this.sfx.play('error');
+      this.ui.toast(
+        { title: `${def.name}: time is up`, text: 'Not every goal was met in time. You can keep playing.', kind: 'bad' },
+        12000,
+      );
+    }
+    this.ui.openWindow('scenario');
   }
 
   /** Point the camera at the middle of a city's buildings. */

@@ -1275,6 +1275,24 @@ input[type='number']:focus,
   margin: 0 0 6px;
 }
 
+.goal .check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.goal .check.met {
+  background: var(--good);
+  border-color: var(--good);
+  color: #10231a;
+}
+
 .progress {
   height: 8px;
   margin: 16px 0 10px;

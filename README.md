@@ -71,6 +71,8 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
   business deals (casino, prison, toxic dump) and rewards unlocked by population.
 - **Starter cities**: six ready-made cities to take over, from a railway town in 1900 to a 100,000-person
   metropolis with highways and subways. Each one is built fresh from its map by the city planner.
+- **Scenarios**: six challenges with goals and a deadline (Boomtown, Gridlock Gulch, Smog Valley, Paradise Found,
+  Budget Crisis, The Big Shake). Win or lose, you can keep playing the city.
 - **Sandbox mode**: unlimited money, every building unlocked from the start (rewards more than once), disasters
   off by default.
 - **Disasters**: fires that spread, tornadoes, earthquakes and meteors.

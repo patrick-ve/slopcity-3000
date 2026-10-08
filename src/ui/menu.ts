@@ -5,6 +5,7 @@ import type { MapOptions, TerrainKind, TreeKind, WaterKind } from '../sim/mapgen
 import type { Difficulty } from '../sim/types';
 import { listSaves } from '../sim/save';
 import { STARTERS, type StarterCity } from '../sim/starters';
+import { GOALS, SCENARIOS, type ScenarioDef } from '../sim/scenarios';
 import type { Game } from '../game/game';
 import { icon } from './icons';
 
@@ -39,6 +40,7 @@ const CITY_NAMES = [
 const TERRAIN_NAMES: Record<TerrainKind, string> = { flat: 'Flat', rolling: 'Rolling', hilly: 'Hilly', mountains: 'Mountains' };
 const WATER_NAMES: Record<WaterKind, string> = { none: 'no water', lakes: 'lakes', river: 'river', coast: 'coast', island: 'island' };
 const DIFFICULTY_NAMES: Record<Difficulty, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+const LEVEL_PILL: Record<ScenarioDef['level'], string> = { Easy: 'good', Medium: 'warn', Hard: 'bad' };
 
 /** Title screen, new-city setup, starter cities and load list. */
 export class Menu {
@@ -90,6 +92,7 @@ export class Menu {
       h('button', { class: `btn ${auto ? '' : 'primary'}`, html: `${icon('building', 18)}New city`, onclick: () => this.showNew() }),
     );
     buttons.appendChild(h('button', { class: 'btn', html: `${icon('city', 18)}Starter cities`, onclick: () => this.showStarters() }));
+    buttons.appendChild(h('button', { class: 'btn', html: `${icon('flag', 18)}Scenarios`, onclick: () => this.showScenarios() }));
     if (saves.some((s) => s.slot !== 'autosave'))
       buttons.appendChild(h('button', { class: 'btn', html: `${icon('load', 18)}Load city`, onclick: () => this.showLoad() }));
     buttons.appendChild(
@@ -142,25 +145,75 @@ export class Menu {
     );
   }
 
-  /** Progress card while a starter city is built. */
-  private async buildStarter(s: StarterCity): Promise<void> {
+  /** Progress card while a city is built; `label` turns progress into a status line. */
+  private progressCard(title: string, tagline: string, label: (p: number) => string): (p: number) => void {
     clear(this.el);
     const fill = h('div', { class: 'fill' });
-    const label = h('div', { class: 'meta' }, 'Laying out roads and zones …');
+    const status = h('div', { class: 'meta' }, label(0));
     this.el.appendChild(
       h(
         'div',
         { class: 'card glass building' },
-        h('h2', {}, `Building ${s.name}`),
-        h('p', { class: 'tagline' }, s.tagline),
+        h('h2', {}, title),
+        h('p', { class: 'tagline' }, tagline),
         h('div', { class: 'progress' }, fill),
-        label,
+        status,
       ),
     );
-    await this.game.playStarter(s.id, (p) => {
+    return (p) => {
       fill.style.width = `${Math.round(p * 100)}%`;
-      if (p > 0.06) label.textContent = `Growing the city: ${s.startYear + Math.min(s.years, Math.floor(p * s.years))}`;
-    });
+      status.textContent = label(p);
+    };
+  }
+
+  private async buildStarter(s: StarterCity): Promise<void> {
+    const update = this.progressCard(`Building ${s.name}`, s.tagline, (p) =>
+      p < 0.06 ? 'Laying out roads and zones …' : `Growing the city: ${s.startYear + Math.min(s.years, Math.floor(p * s.years))}`,
+    );
+    await this.game.playStarter(s.id, update);
+  }
+
+  private showScenarios(): void {
+    clear(this.el);
+    const list = h('div', { class: 'slots' });
+    for (const s of SCENARIOS) {
+      const goals = s.goals
+        .map((g) => (typeof g.target === 'number' ? GOALS[g.kind].label(g.target) : (g.hint ?? GOALS[g.kind].label(0))))
+        .join(' · ');
+      list.appendChild(
+        h(
+          'div',
+          { class: 'slot' },
+          h(
+            'div',
+            { class: 'info' },
+            h('div', { class: 'nm' }, s.name, h('span', { class: `pill ${LEVEL_PILL[s.level]}`, style: 'margin-left:8px' }, s.level)),
+            h('div', { class: 'desc' }, s.brief),
+            h('div', { class: 'meta' }, `${s.years} years · ${goals}`),
+          ),
+          h('button', { class: 'btn small primary', onclick: () => void this.buildScenario(s) }, 'Play'),
+        ),
+      );
+    }
+    this.el.appendChild(
+      h(
+        'div',
+        { class: 'newcity glass' },
+        h('h2', {}, 'Scenarios'),
+        h(
+          'p',
+          { class: 'note', style: 'margin:-6px 0 12px' },
+          'Meet every goal before the deadline. Win or lose, you can keep playing the city.',
+        ),
+        list,
+        h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: () => this.showMain() }, 'Back')),
+      ),
+    );
+  }
+
+  private async buildScenario(s: ScenarioDef): Promise<void> {
+    const update = this.progressCard(s.name, s.brief, (p) => (p < 0.06 ? 'Preparing the map …' : 'Getting the city ready …'));
+    await this.game.playScenario(s.id, update);
   }
 
   private showLoad(): void {
