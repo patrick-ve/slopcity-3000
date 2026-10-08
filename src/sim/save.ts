@@ -33,7 +33,23 @@ function unb64(str: string): Uint8Array {
   return out;
 }
 
-const BUILDING_KEYS: (keyof Building)[] = ['id', 'def', 'x', 'y', 'w', 'h', 'rot', 'variant', 'seed', 'pop', 'build', 'abandoned', 'fire', 'age', 'unhappy'];
+const BUILDING_KEYS: (keyof Building)[] = [
+  'id',
+  'def',
+  'x',
+  'y',
+  'w',
+  'h',
+  'rot',
+  'variant',
+  'seed',
+  'pop',
+  'build',
+  'abandoned',
+  'fire',
+  'age',
+  'unhappy',
+];
 
 export function serialize(sim: Sim): string {
   const w = sim.world;
@@ -53,7 +69,9 @@ export function serialize(sim: Sim): string {
       rubble: b64(w.rubble),
       landfill: b64(new Uint8Array(w.landfill.buffer.slice(0))),
     },
-    buildings: [...w.buildings.values()].map((b) => BUILDING_KEYS.map((k) => (typeof b[k] === 'boolean' ? (b[k] ? 1 : 0) : (b[k] as number | string)))),
+    buildings: [...w.buildings.values()].map((b) =>
+      BUILDING_KEYS.map((k) => (typeof b[k] === 'boolean' ? (b[k] ? 1 : 0) : (b[k] as number | string))),
+    ),
     nextId: w.nextId,
     city: sim.city,
     rng: sim.rng.state,

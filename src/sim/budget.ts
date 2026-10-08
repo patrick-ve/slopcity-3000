@@ -64,7 +64,12 @@ export function computeBudget(sim: Sim): MonthlyReport {
   const income = { resTax, comTax, indTax, ordinances: ordIncome, deals: dealIncome };
   const expense = { departments, utilities, ordinances: ordCost, loans, deals: dealCost };
   const total =
-    resTax + comTax + indTax + ordIncome + dealIncome - (Object.values(departments).reduce((a, b) => a + b, 0) + utilities + ordCost + loans + dealCost);
+    resTax +
+    comTax +
+    indTax +
+    ordIncome +
+    dealIncome -
+    (Object.values(departments).reduce((a, b) => a + b, 0) + utilities + ordCost + loans + dealCost);
   return { income, expense, total };
 }
 

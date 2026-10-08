@@ -19,7 +19,14 @@ export class Effects {
       pts.push(new THREE.Vector2(0.12 + t * t * 1.4, t * 4.2));
     }
     const geo = new THREE.LatheGeometry(pts, 9);
-    const mat = new THREE.MeshLambertMaterial({ color: 0x8a8f96, transparent: true, opacity: 0.78, flatShading: true, side: THREE.DoubleSide, depthWrite: false });
+    const mat = new THREE.MeshLambertMaterial({
+      color: 0x8a8f96,
+      transparent: true,
+      opacity: 0.78,
+      flatShading: true,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
     this.funnel = new THREE.Mesh(geo, mat);
     this.funnel.visible = false;
     this.group.add(this.funnel);

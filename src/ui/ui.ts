@@ -72,7 +72,10 @@ export class UI {
   /** Interface scale: screen pixels per interface pixel. */
   scale = 1;
 
-  constructor(private game: Game, container: HTMLElement) {
+  constructor(
+    private game: Game,
+    container: HTMLElement,
+  ) {
     this.root = h('div', { id: 'ui' });
     container.appendChild(this.root);
     this.buildTopbar();
@@ -153,11 +156,22 @@ export class UI {
     this.statFundsDelta = h('span', { class: 'delta' });
     this.statPop = h('div', { class: 'val num' });
     this.statPopDelta = h('span', { class: 'delta' });
-    const funds = h('div', { class: 'stat', title: 'Treasury and monthly cash flow', onclick: () => this.openWindow('budget') }, h('div', { class: 'lbl' }, 'Funds'), h('div', { style: 'display:flex;align-items:baseline' }, this.statFunds, this.statFundsDelta));
-    const pop = h('div', { class: 'stat', title: 'Population', onclick: () => this.openWindow('graphs') }, h('div', { class: 'lbl' }, 'Population'), h('div', { style: 'display:flex;align-items:baseline' }, this.statPop, this.statPopDelta));
+    const funds = h(
+      'div',
+      { class: 'stat', title: 'Treasury and monthly cash flow', onclick: () => this.openWindow('budget') },
+      h('div', { class: 'lbl' }, 'Funds'),
+      h('div', { style: 'display:flex;align-items:baseline' }, this.statFunds, this.statFundsDelta),
+    );
+    const pop = h(
+      'div',
+      { class: 'stat', title: 'Population', onclick: () => this.openWindow('graphs') },
+      h('div', { class: 'lbl' }, 'Population'),
+      h('div', { style: 'display:flex;align-items:baseline' }, this.statPop, this.statPopDelta),
+    );
     funds.style.cursor = 'pointer';
     pop.style.cursor = 'pointer';
-    const btn = (id: string, ic: string, title: string) => h('button', { class: 'iconbtn', title, html: icon(ic), onclick: () => this.toggleWindow(id) });
+    const btn = (id: string, ic: string, title: string) =>
+      h('button', { class: 'iconbtn', title, html: icon(ic), onclick: () => this.toggleWindow(id) });
     this.advisorBtn = btn('advisors', 'advisors', 'Advisors');
     this.topbar = h(
       'div',
@@ -308,7 +322,12 @@ export class UI {
     const cols = (['R', 'C', 'I'] as const).map((l, k) => {
       const fill = h('div', { class: 'fill', style: `background:${['var(--r)', 'var(--c)', 'var(--i)'][k]}` });
       this.rciFill.push(fill);
-      return h('div', { class: 'col' }, h('div', { class: 'bar' }, fill), h('div', { class: 'lbl', style: `color:${['var(--r)', 'var(--c)', 'var(--i)'][k]}` }, l));
+      return h(
+        'div',
+        { class: 'col' },
+        h('div', { class: 'bar' }, fill),
+        h('div', { class: 'lbl', style: `color:${['var(--r)', 'var(--c)', 'var(--i)'][k]}` }, l),
+      );
     });
     this.rciBox = h('div', { class: 'rci', title: 'Demand' }, ...cols);
     this.ticker = h('div', { class: 'ticker', title: 'News — click for the archive', onclick: () => this.toggleWindow('news') });
@@ -316,18 +335,24 @@ export class UI {
     this.speedName = h('div', { class: 's' });
     const speeds = h('div', { class: 'speeds' });
     SPEED_ICONS.forEach((ic, s) => {
-      const b = h('button', {
-        class: 'iconbtn',
-        title: `${SPEED_NAMES[s]} (${s === 0 ? 'Space' : s})`,
-        onclick: () => {
-          this.game.setSpeed(s as Speed);
-          this.game.sfx.play('click');
+      const b = h(
+        'button',
+        {
+          class: 'iconbtn',
+          title: `${SPEED_NAMES[s]} (${s === 0 ? 'Space' : s})`,
+          onclick: () => {
+            this.game.setSpeed(s as Speed);
+            this.game.sfx.play('click');
+          },
         },
-      }, ic) as HTMLButtonElement;
+        ic,
+      ) as HTMLButtonElement;
       this.speedBtns.push(b);
       speeds.appendChild(b);
     });
-    this.root.appendChild(h('div', { class: 'bottombar glass' }, this.rciBox, this.ticker, h('div', { class: 'datebox' }, this.dateEl, this.speedName), speeds));
+    this.root.appendChild(
+      h('div', { class: 'bottombar glass' }, this.rciBox, this.ticker, h('div', { class: 'datebox' }, this.dateEl, this.speedName), speeds),
+    );
   }
 
   // ------------------------------------------------------------ side panel
@@ -367,7 +392,10 @@ export class UI {
     }
     this.legend.style.display = '';
     clear(this.legend);
-    this.legend.append(h('div', { class: 'grad', style: `background:${def.gradient}` }), h('div', { class: 'ends' }, h('span', {}, def.legend[0]), h('span', {}, def.legend[1])));
+    this.legend.append(
+      h('div', { class: 'grad', style: `background:${def.gradient}` }),
+      h('div', { class: 'ends' }, h('span', {}, def.legend[0]), h('span', {}, def.legend[1])),
+    );
     this.minimapTimer = 0;
   }
 
@@ -438,15 +466,19 @@ export class UI {
     );
     if (m.x !== undefined && m.y !== undefined) {
       t.appendChild(
-        h('div', { class: 'acts' }, h('button', {
-          class: 'btn small',
-          html: icon('target', 14),
-          title: 'Go there',
-          onclick: () => {
-            this.game.renderer.cam.lookAt(m.x!, m.y!, Math.min(this.game.renderer.cam.goalZoom, 10));
-            dismiss();
-          },
-        })),
+        h(
+          'div',
+          { class: 'acts' },
+          h('button', {
+            class: 'btn small',
+            html: icon('target', 14),
+            title: 'Go there',
+            onclick: () => {
+              this.game.renderer.cam.lookAt(m.x!, m.y!, Math.min(this.game.renderer.cam.goalZoom, 10));
+              dismiss();
+            },
+          }),
+        ),
       );
     }
     const dismiss = () => {

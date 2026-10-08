@@ -38,7 +38,13 @@ export class Disasters {
     b.fire = 14 + Math.floor(this.sim.rng.next() * 12);
     this.sim.world.markDirty(b.x, b.y, DIRTY_OBJECTS);
     if (announce) {
-      this.sim.message({ title: 'Fire!', text: `A fire has broken out at a ${def.name}.`, kind: 'bad', x: b.x + b.w / 2, y: b.y + b.h / 2 });
+      this.sim.message({
+        title: 'Fire!',
+        text: `A fire has broken out at a ${def.name}.`,
+        kind: 'bad',
+        x: b.x + b.w / 2,
+        y: b.y + b.h / 2,
+      });
       this.sim.events.emit('sound', 'siren');
     }
     return true;
@@ -147,7 +153,13 @@ export class Disasters {
             hit++;
           } else if (roll < p) this.ignite(b, false);
         }
-        sim.message({ title: 'Earthquake!', text: `A strong earthquake shook the city. ${hit} buildings collapsed.`, kind: 'bad', x: rx, y: ry });
+        sim.message({
+          title: 'Earthquake!',
+          text: `A strong earthquake shook the city. ${hit} buildings collapsed.`,
+          kind: 'bad',
+          x: rx,
+          y: ry,
+        });
         sim.events.emit('news', { text: 'Earthquake rattles the city — damage being assessed', kind: 'bad' });
         sim.events.emit('sound', 'quake');
         break;

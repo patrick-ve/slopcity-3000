@@ -5,9 +5,7 @@ export class Noise2D {
   private perm = new Uint8Array(512);
   private permMod12 = new Uint8Array(512);
 
-  private static readonly grad = new Float32Array([
-    1, 1, -1, 1, 1, -1, -1, -1, 1, 0, -1, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 1, 0, -1,
-  ]);
+  private static readonly grad = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1, 1, 0, -1, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 1, 0, -1]);
 
   constructor(seed: number) {
     const rng = new Rng(seed);

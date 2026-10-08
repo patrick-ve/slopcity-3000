@@ -32,7 +32,10 @@ function signed(n: number): string {
 
 export class BudgetPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'budget', 'Budget', 'budget', 600);
   }
 
@@ -95,35 +98,50 @@ export class BudgetPanel implements Panel {
     if (rep.expense.loans) b.appendChild(this.line('Bond payments', -rep.expense.loans));
 
     b.appendChild(h('div', { class: 'section-title' }, 'Bonds'));
-    if (!c.loans.length) b.appendChild(h('div', { class: 'note' }, 'No outstanding bonds. Bonds give you cash now and are repaid over 10 years with interest.'));
+    if (!c.loans.length)
+      b.appendChild(
+        h('div', { class: 'note' }, 'No outstanding bonds. Bonds give you cash now and are repaid over 10 years with interest.'),
+      );
     for (const l of c.loans) {
       b.appendChild(
         h(
           'div',
           { class: 'row' },
-          h('span', { class: 'k' }, `${money(l.principal)} at ${(l.rate * 100).toFixed(1)}% — ${money(l.payment)}/mo, ${money(l.remaining)} left`),
-          h('button', {
-            class: 'btn small',
-            disabled: c.funds < l.remaining,
-            onclick: () => {
-              if (sim.repayLoan(l.id)) this.game.sfx.play('cash');
-              this.refresh();
+          h(
+            'span',
+            { class: 'k' },
+            `${money(l.principal)} at ${(l.rate * 100).toFixed(1)}% — ${money(l.payment)}/mo, ${money(l.remaining)} left`,
+          ),
+          h(
+            'button',
+            {
+              class: 'btn small',
+              disabled: c.funds < l.remaining,
+              onclick: () => {
+                if (sim.repayLoan(l.id)) this.game.sfx.play('cash');
+                this.refresh();
+              },
             },
-          }, 'Repay'),
+            'Repay',
+          ),
         ),
       );
     }
     const issue = h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' });
     for (const amt of [5000, 10000, 25000]) {
       issue.appendChild(
-        h('button', {
-          class: 'btn small',
-          disabled: c.loans.length >= 5,
-          onclick: () => {
-            if (sim.takeLoan(amt)) this.game.sfx.play('cash');
-            this.refresh();
+        h(
+          'button',
+          {
+            class: 'btn small',
+            disabled: c.loans.length >= 5,
+            onclick: () => {
+              if (sim.takeLoan(amt)) this.game.sfx.play('cash');
+              this.refresh();
+            },
           },
-        }, `Issue ${money(amt)} bond`),
+          `Issue ${money(amt)} bond`,
+        ),
       );
     }
     b.appendChild(issue);
@@ -170,7 +188,10 @@ export class BudgetPanel implements Panel {
 
 export class OrdinancesPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'ordinances', 'Ordinances', 'ordinances', 540);
   }
 
@@ -184,7 +205,12 @@ export class OrdinancesPanel implements Panel {
     let total = 0;
     for (const o of ORDINANCES) if (sim.city.ordinances[o.id]) total -= ordinanceMonthly(o, pop);
     b.appendChild(
-      h('div', { class: 'row' }, h('span', { class: 'k' }, 'Net monthly effect of active ordinances'), h('span', { class: `v num ${total >= 0 ? 'pos' : 'neg'}` }, signed(total))),
+      h(
+        'div',
+        { class: 'row' },
+        h('span', { class: 'k' }, 'Net monthly effect of active ordinances'),
+        h('span', { class: `v num ${total >= 0 ? 'pos' : 'neg'}` }, signed(total)),
+      ),
     );
     const cats = [...new Set(ORDINANCES.map((o) => o.category))] as OrdinanceCategory[];
     for (const cat of cats) {
@@ -209,7 +235,12 @@ export class OrdinancesPanel implements Panel {
             'label',
             { class: `check ${locked ? 'locked' : ''}` },
             cb,
-            h('div', {}, h('div', { class: 't' }, o.name), h('div', { class: 'd' }, locked ? `Available at ${int(o.minPop ?? 0)} residents` : o.desc)),
+            h(
+              'div',
+              {},
+              h('div', { class: 't' }, o.name),
+              h('div', { class: 'd' }, locked ? `Available at ${int(o.minPop ?? 0)} residents` : o.desc),
+            ),
             h('div', { class: 'amt', style: `color:${amt >= 0 ? 'var(--good)' : 'var(--muted)'}` }, `${signed(amt)}/mo`),
           ),
         );
@@ -252,7 +283,10 @@ export class GraphsPanel implements Panel {
   private range = 120;
   private canvas: HTMLCanvasElement;
 
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'graphs', 'City Statistics', 'graphs', 660);
     this.canvas = h('canvas', { class: 'graph-canvas' }) as HTMLCanvasElement;
   }
@@ -285,13 +319,17 @@ export class GraphsPanel implements Panel {
       ['All', 100000],
     ] as [string, number][]) {
       tabs.appendChild(
-        h('button', {
-          class: `tab ${this.range === months ? 'on' : ''}`,
-          onclick: () => {
-            this.range = months;
-            this.refresh();
+        h(
+          'button',
+          {
+            class: `tab ${this.range === months ? 'on' : ''}`,
+            onclick: () => {
+              this.range = months;
+              this.refresh();
+            },
           },
-        }, label),
+          label,
+        ),
       );
     }
     b.appendChild(tabs);
@@ -299,14 +337,19 @@ export class GraphsPanel implements Panel {
     const ser = h('div', { class: 'series' });
     for (const sr of SERIES) {
       ser.appendChild(
-        h('button', {
-          class: `tab ${this.selected.has(sr.key) ? 'on' : ''}`,
-          onclick: () => {
-            if (this.selected.has(sr.key)) this.selected.delete(sr.key);
-            else this.selected.add(sr.key);
-            this.refresh();
+        h(
+          'button',
+          {
+            class: `tab ${this.selected.has(sr.key) ? 'on' : ''}`,
+            onclick: () => {
+              if (this.selected.has(sr.key)) this.selected.delete(sr.key);
+              else this.selected.add(sr.key);
+              this.refresh();
+            },
           },
-        }, h('span', { class: 'dot', style: `background:${sr.color}` }), sr.name),
+          h('span', { class: 'dot', style: `background:${sr.color}` }),
+          sr.name,
+        ),
       );
     }
     b.appendChild(ser);
@@ -382,7 +425,10 @@ export class GraphsPanel implements Panel {
 
 export class AdvisorsPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'advisors', 'Advisors', 'advisors', 680);
   }
 
@@ -417,7 +463,10 @@ export class AdvisorsPanel implements Panel {
 
 export class NeighborsPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'neighbors', 'Neighbours', 'neighbors', 460);
   }
 
@@ -435,10 +484,15 @@ export class NeighborsPanel implements Panel {
       ['Power lines', con.power],
       ['Water pipes', con.pipe],
     ] as [string, number][]) {
-      kv.append(h('div', { class: 'k' }, k), h('div', { class: 'v' }, v ? h('span', { class: 'pill good' }, `${v} connected`) : h('span', { class: 'pill' }, 'none')));
+      kv.append(
+        h('div', { class: 'k' }, k),
+        h('div', { class: 'v' }, v ? h('span', { class: 'pill good' }, `${v} connected`) : h('span', { class: 'pill' }, 'none')),
+      );
     }
     b.appendChild(kv);
-    b.appendChild(h('div', { class: 'note', style: 'margin-top:8px' }, 'Road and rail connections bring commuters and trade, and raise demand.'));
+    b.appendChild(
+      h('div', { class: 'note', style: 'margin-top:8px' }, 'Road and rail connections bring commuters and trade, and raise demand.'),
+    );
     b.appendChild(h('div', { class: 'section-title' }, 'Deals'));
     const deals = sim.city.deals;
     const deal = (key: 'power' | 'water' | 'garbage', title: string, desc: string, cost: string, needs: boolean, why: string) => {
@@ -455,12 +509,39 @@ export class NeighborsPanel implements Panel {
         },
       });
       b.appendChild(
-        h('label', { class: `check ${!needs && !deals[key] ? 'locked' : ''}` }, cb, h('div', {}, h('div', { class: 't' }, title), h('div', { class: 'd' }, needs ? desc : why)), h('div', { class: 'amt' }, cost)),
+        h(
+          'label',
+          { class: `check ${!needs && !deals[key] ? 'locked' : ''}` },
+          cb,
+          h('div', {}, h('div', { class: 't' }, title), h('div', { class: 'd' }, needs ? desc : why)),
+          h('div', { class: 'amt' }, cost),
+        ),
       );
     };
-    deal('power', 'Buy power', 'A neighbour supplies 1,000 MW through a power line at the map edge.', `${money(-DEAL_COSTS.power)}/mo`, con.power > 0, 'Needs a power line to the map edge.');
-    deal('water', 'Buy water', 'A neighbour supplies 4,000 kL through a pipe at the map edge.', `${money(-DEAL_COSTS.water)}/mo`, con.pipe > 0, 'Needs a water pipe to the map edge.');
-    deal('garbage', 'Export garbage', `Ship up to ${int(EXPORT_LIMIT)} tons a month to a neighbour by road.`, `§${DEAL_COSTS.garbagePerTon}/ton`, con.road > 0, 'Needs a road to the map edge.');
+    deal(
+      'power',
+      'Buy power',
+      'A neighbour supplies 1,000 MW through a power line at the map edge.',
+      `${money(-DEAL_COSTS.power)}/mo`,
+      con.power > 0,
+      'Needs a power line to the map edge.',
+    );
+    deal(
+      'water',
+      'Buy water',
+      'A neighbour supplies 4,000 kL through a pipe at the map edge.',
+      `${money(-DEAL_COSTS.water)}/mo`,
+      con.pipe > 0,
+      'Needs a water pipe to the map edge.',
+    );
+    deal(
+      'garbage',
+      'Export garbage',
+      `Ship up to ${int(EXPORT_LIMIT)} tons a month to a neighbour by road.`,
+      `§${DEAL_COSTS.garbagePerTon}/ton`,
+      con.road > 0,
+      'Needs a road to the map edge.',
+    );
   }
 }
 
@@ -468,7 +549,10 @@ export class NeighborsPanel implements Panel {
 
 export class DisastersPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'disasters', 'Disasters', 'disasters', 360);
   }
 
@@ -508,7 +592,12 @@ export class DisastersPanel implements Panel {
           checked: sim.city.disastersEnabled,
           onchange: (e: Event) => (sim.city.disastersEnabled = (e.target as HTMLInputElement).checked),
         }),
-        h('div', {}, h('div', { class: 't' }, 'Random disasters'), h('div', { class: 'd' }, 'Fires and rare catastrophes happen on their own.')),
+        h(
+          'div',
+          {},
+          h('div', { class: 't' }, 'Random disasters'),
+          h('div', { class: 'd' }, 'Fires and rare catastrophes happen on their own.'),
+        ),
       ),
     );
   }
@@ -520,7 +609,10 @@ export class QueryPanel implements Panel {
   win: UIWindow;
   tx = 0;
   ty = 0;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'query', 'Query', 'query', 340);
   }
 
@@ -554,8 +646,10 @@ export class QueryPanel implements Panel {
       if (bld.build > 0) status.push(h('span', { class: 'pill warn' }, `Under construction (${bld.build} days)`));
       if (bld.abandoned) status.push(h('span', { class: 'pill bad' }, 'Abandoned'));
       if (bld.fire > 0) status.push(h('span', { class: 'pill bad' }, 'On fire!'));
-      if (needsPower(def) && bld.build <= 0) status.push(h('span', { class: `pill ${bld.powered ? 'good' : 'bad'}` }, bld.powered ? 'Powered' : 'No power'));
-      if (needsWater(def) && bld.build <= 0) status.push(h('span', { class: `pill ${bld.watered ? 'good' : 'bad'}` }, bld.watered ? 'Water' : 'No water'));
+      if (needsPower(def) && bld.build <= 0)
+        status.push(h('span', { class: `pill ${bld.powered ? 'good' : 'bad'}` }, bld.powered ? 'Powered' : 'No power'));
+      if (needsWater(def) && bld.build <= 0)
+        status.push(h('span', { class: `pill ${bld.watered ? 'good' : 'bad'}` }, bld.watered ? 'Water' : 'No water'));
       b.appendChild(h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px' }, ...status));
       if (def.desc) b.appendChild(h('div', { class: 'note', style: 'margin-bottom:8px' }, def.desc));
       if (def.growable) {
@@ -584,7 +678,15 @@ export class QueryPanel implements Panel {
       if (n & NET.RAIL) parts.push('Rail');
       if (n & NET.POWER) parts.push('Power line');
       if (n & NET.PIPE) parts.push('Water pipe');
-      this.win.setTitle(parts.length ? parts.join(' + ') : z ? `${DENSITY_NAMES[w.density[i]] ?? ''} ${ZONE_NAMES[z]}`.trim() : w.isWater(tx, ty) ? 'Water' : 'Open land');
+      this.win.setTitle(
+        parts.length
+          ? parts.join(' + ')
+          : z
+            ? `${DENSITY_NAMES[w.density[i]] ?? ''} ${ZONE_NAMES[z]}`.trim()
+            : w.isWater(tx, ty)
+              ? 'Water'
+              : 'Open land',
+      );
       if (z) add('Zone', z === 4 ? 'Landfill' : `${DENSITY_NAMES[w.density[i]]} ${ZONE_NAMES[z]}`);
       if (z === 4) add('Landfill', `${int(w.landfill[i])} / ${int(LANDFILL_CAPACITY)} t`);
       if (z >= 1 && z <= 3) {
@@ -611,7 +713,10 @@ export class QueryPanel implements Panel {
 
 export class SavePanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'save', 'Save & Load', 'save', 480);
   }
 
@@ -628,14 +733,18 @@ export class SavePanel implements Panel {
           'div',
           { class: 'row' },
           name,
-          h('button', {
-            class: 'btn primary',
-            onclick: () => {
-              const slot = name.value.trim() || sim.city.name;
-              if (this.game.saveSlot(slot)) this.game.ui.toast({ title: 'City saved', text: `Saved as “${slot}”.`, kind: 'good' }, 2500);
-              this.refresh();
+          h(
+            'button',
+            {
+              class: 'btn primary',
+              onclick: () => {
+                const slot = name.value.trim() || sim.city.name;
+                if (this.game.saveSlot(slot)) this.game.ui.toast({ title: 'City saved', text: `Saved as “${slot}”.`, kind: 'good' }, 2500);
+                this.refresh();
+              },
             },
-          }, 'Save'),
+            'Save',
+          ),
         ),
       );
     }
@@ -670,23 +779,36 @@ export class SavePanel implements Panel {
     return h(
       'div',
       { class: 'slot' },
-      h('div', { class: 'info' }, h('div', { class: 'nm' }, s.slot === 'autosave' ? `${s.name} (autosave)` : s.slot), h('div', { class: 'meta' }, `${int(s.population)} residents · ${s.date} · saved ${new Date(s.savedAt).toLocaleString('en-US')}`)),
-      h('button', {
-        class: 'btn small primary',
-        onclick: () => {
-          if (this.game.loadSlot(s.slot)) this.win.close();
+      h(
+        'div',
+        { class: 'info' },
+        h('div', { class: 'nm' }, s.slot === 'autosave' ? `${s.name} (autosave)` : s.slot),
+        h('div', { class: 'meta' }, `${int(s.population)} residents · ${s.date} · saved ${new Date(s.savedAt).toLocaleString('en-US')}`),
+      ),
+      h(
+        'button',
+        {
+          class: 'btn small primary',
+          onclick: () => {
+            if (this.game.loadSlot(s.slot)) this.win.close();
+          },
         },
-      }, 'Load'),
-      h('button', {
-        class: 'btn small danger',
-        title: 'Delete',
-        onclick: () => {
-          if (confirm(`Delete the saved city “${s.slot}”?`)) {
-            deleteSlot(s.slot);
-            this.refresh();
-          }
+        'Load',
+      ),
+      h(
+        'button',
+        {
+          class: 'btn small danger',
+          title: 'Delete',
+          onclick: () => {
+            if (confirm(`Delete the saved city “${s.slot}”?`)) {
+              deleteSlot(s.slot);
+              this.refresh();
+            }
+          },
         },
-      }, 'Delete'),
+        'Delete',
+      ),
     );
   }
 }
@@ -695,7 +817,10 @@ export class SavePanel implements Panel {
 
 export class OptionsPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'options', 'Options', 'options', 420);
   }
 
@@ -709,14 +834,18 @@ export class OptionsPanel implements Panel {
       const box = h('div', { class: 'seg' });
       for (const [v, l] of opts) {
         box.appendChild(
-          h('button', {
-            class: value === v ? 'on' : '',
-            onclick: () => {
-              set(v);
-              g.applySettings();
-              this.refresh();
+          h(
+            'button',
+            {
+              class: value === v ? 'on' : '',
+              onclick: () => {
+                set(v);
+                g.applySettings();
+                this.refresh();
+              },
             },
-          }, l),
+            l,
+          ),
         );
       }
       return h('div', { class: 'row' }, h('span', { class: 'k' }, label), box);
@@ -736,7 +865,18 @@ export class OptionsPanel implements Panel {
         h('div', {}, h('div', { class: 't' }, label), h('div', { class: 'd' }, desc)),
       );
     b.appendChild(h('div', { class: 'section-title' }, 'Graphics'));
-    b.appendChild(seg('Shadows', st.shadows, [['off', 'Off'], ['low', 'Low'], ['high', 'High']], (v) => (st.shadows = v)));
+    b.appendChild(
+      seg(
+        'Shadows',
+        st.shadows,
+        [
+          ['off', 'Off'],
+          ['low', 'Low'],
+          ['high', 'High'],
+        ],
+        (v) => (st.shadows = v),
+      ),
+    );
     b.appendChild(toggle('Day / night cycle', 'Watch the city light up at night.', st.dayNight, (v) => (st.dayNight = v)));
     b.appendChild(toggle('Show grid', 'Draw tile lines on the ground (G).', st.grid, (v) => (st.grid = v)));
     b.appendChild(h('div', { class: 'section-title' }, 'Sound'));
@@ -753,22 +893,28 @@ export class OptionsPanel implements Panel {
     b.appendChild(h('div', { class: 'row' }, h('span', { class: 'k', style: 'flex:0 0 90px' }, 'Volume'), vol));
     b.appendChild(toggle('Mute', 'Silence all sound effects (M).', st.muted, (v) => (st.muted = v)));
     b.appendChild(h('div', { class: 'section-title' }, 'Gameplay'));
-    b.appendChild(toggle('Edge scrolling', 'Move the view when the mouse touches the screen edge.', st.edgeScroll, (v) => (st.edgeScroll = v)));
+    b.appendChild(
+      toggle('Edge scrolling', 'Move the view when the mouse touches the screen edge.', st.edgeScroll, (v) => (st.edgeScroll = v)),
+    );
     b.appendChild(toggle('Autosave', 'Save the city every 3 minutes.', st.autosave, (v) => (st.autosave = v)));
     b.appendChild(
       h(
         'div',
         { class: 'row', style: 'margin-top:12px;gap:8px' },
         h('button', { class: 'btn', onclick: () => g.ui.openWindow('help') }, 'How to play'),
-        h('button', {
-          class: 'btn danger',
-          onclick: () => {
-            if (confirm('Quit to the main menu? Unsaved progress is kept in the autosave.')) {
-              this.win.close();
-              g.toMenu();
-            }
+        h(
+          'button',
+          {
+            class: 'btn danger',
+            onclick: () => {
+              if (confirm('Quit to the main menu? Unsaved progress is kept in the autosave.')) {
+                this.win.close();
+                g.toMenu();
+              }
+            },
           },
-        }, 'Main menu'),
+          'Main menu',
+        ),
       ),
     );
   }
@@ -796,7 +942,9 @@ export class HelpPanel implements Panel {
       'Add police, fire stations, schools, hospitals and parks as the city grows. Check the Advisors.',
       'Connect a road to the map edge to trade with your neighbours.',
     ];
-    b.appendChild(h('ol', { class: 'note', style: 'padding-left:18px;margin:0' }, ...steps.map((s) => h('li', { style: 'margin:3px 0' }, s))));
+    b.appendChild(
+      h('ol', { class: 'note', style: 'padding-left:18px;margin:0' }, ...steps.map((s) => h('li', { style: 'margin:3px 0' }, s))),
+    );
     b.appendChild(h('div', { class: 'section-title' }, 'Controls'));
     const keys: [string, string][] = [
       ['Left drag', 'Use the current tool (zones, roads, bulldoze …)'],
@@ -822,7 +970,10 @@ export class HelpPanel implements Panel {
 
 export class NewsPanel implements Panel {
   win: UIWindow;
-  constructor(private game: Game, host: HTMLElement) {
+  constructor(
+    private game: Game,
+    host: HTMLElement,
+  ) {
     this.win = new UIWindow(host, 'news', 'SlopCity Times', 'news', 500);
   }
 

@@ -83,9 +83,7 @@ function addBuilding(world: World, out: ObjectChunk, b: Building): void {
     buf.tri([x0, y0, z0], [x0, y1, z1], [x0, y1, z0], 0x958f84);
   }
   const constructing = b.build > 0;
-  const mesh = constructing
-    ? getModel({ model: 'construction', w: def.w, h: def.h, variant: b.seed & 7 })
-    : modelForDef(def, b.variant);
+  const mesh = constructing ? getModel({ model: 'construction', w: def.w, h: def.h, variant: b.seed & 7 }) : modelForDef(def, b.variant);
   const pl = rotPlacement(b.rot, def.w, def.h, b.x, baseY, b.y);
   const burning = b.fire > 0;
   buf.addModel(mesh, pl, {
@@ -122,7 +120,6 @@ function addBuilding(world: World, out: ObjectChunk, b: Building): void {
     }
   }
 }
-
 
 function addTrees(world: World, out: ObjectChunk, x: number, y: number, density: number): void {
   const n = density === 1 ? 1 : density === 2 ? 2 : 3;

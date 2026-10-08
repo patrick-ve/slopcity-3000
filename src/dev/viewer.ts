@@ -10,7 +10,10 @@ import { modelToGeometry } from '../render/meshUtil';
 import { createBuildingMaterial, shared } from '../render/materials';
 
 const params = new URLSearchParams(location.search);
-const filter = (params.get('filter') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const filter = (params.get('filter') ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 const query = (params.get('q') ?? '').toLowerCase();
 const variants = Math.max(1, Number(params.get('variants') ?? 1));
 const night = Number(params.get('night') ?? 0);
@@ -36,8 +39,7 @@ for (const key of Object.keys(MODELS)) {
 // filter=<model keys or def ids> (exact), q=<substring of label>
 const shown = items.filter(
   (it) =>
-    (filter.length === 0 || filter.some((f) => it.model === f || it.def?.id === f)) &&
-    (!query || it.label.toLowerCase().includes(query)),
+    (filter.length === 0 || filter.some((f) => it.model === f || it.def?.id === f)) && (!query || it.label.toLowerCase().includes(query)),
 );
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -88,10 +90,7 @@ for (const it of shown) {
     m.castShadow = true;
     m.receiveShadow = true;
     scene.add(m);
-    const plate = new THREE.Mesh(
-      new THREE.BoxGeometry(it.w, 0.04, it.h),
-      new THREE.MeshLambertMaterial({ color: 0x7fb24a }),
-    );
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(it.w, 0.04, it.h), new THREE.MeshLambertMaterial({ color: 0x7fb24a }));
     plate.position.set(cx + it.w / 2, 0, cz + it.h / 2);
     plate.receiveShadow = true;
     scene.add(plate);
@@ -105,7 +104,10 @@ for (const it of shown) {
   }
 }
 const rows = Math.ceil(idx / cols);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(cols * cell + 10, rows * cell + 10), new THREE.MeshLambertMaterial({ color: 0x6f9f45 }));
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(cols * cell + 10, rows * cell + 10),
+  new THREE.MeshLambertMaterial({ color: 0x6f9f45 }),
+);
 ground.rotation.x = -Math.PI / 2;
 ground.position.set((cols * cell) / 2 - 1, -0.03, (rows * cell) / 2 - 1);
 ground.receiveShadow = true;

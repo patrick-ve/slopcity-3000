@@ -30,21 +30,21 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
 
 ### Controls
 
-| Input | Action |
-| --- | --- |
-| Left drag | Use the current tool (zones, roads, bulldoze, …) |
-| Right drag | Pan |
-| Middle drag (or Alt + left drag) | Rotate and tilt |
-| Wheel | Zoom (toward the cursor) |
-| `W` `A` `S` `D` / arrows | Pan |
-| `Q` / `E` | Rotate the view 90° |
-| `Shift` while dragging | Bend lines the other way |
-| `X` / `Tab` | Rotate the building you are placing |
-| `Space`, `1` `2` `3` | Pause, Turtle, Llama, Cheetah |
-| `B` `R` `P` `U` `Z` | Bulldoze, road, power line, pipe, zones menu |
-| `G` / `M` / `H` | Grid, mute, help |
-| `Esc` | Close window / cancel / query tool |
-| `Ctrl`+`S` | Quick save |
+| Input                            | Action                                           |
+| -------------------------------- | ------------------------------------------------ |
+| Left drag                        | Use the current tool (zones, roads, bulldoze, …) |
+| Right drag                       | Pan                                              |
+| Middle drag (or Alt + left drag) | Rotate and tilt                                  |
+| Wheel                            | Zoom (toward the cursor)                         |
+| `W` `A` `S` `D` / arrows         | Pan                                              |
+| `Q` / `E`                        | Rotate the view 90°                              |
+| `Shift` while dragging           | Bend lines the other way                         |
+| `X` / `Tab`                      | Rotate the building you are placing              |
+| `Space`, `1` `2` `3`             | Pause, Turtle, Llama, Cheetah                    |
+| `B` `R` `P` `U` `Z`              | Bulldoze, road, power line, pipe, zones menu     |
+| `G` / `M` / `H`                  | Grid, mute, help                                 |
+| `Esc`                            | Close window / cancel / query tool               |
+| `Ctrl`+`S`                       | Quick save                                       |
 
 ## Features
 
@@ -97,11 +97,11 @@ uses instancing for cars, trains, particles, rotors and icons.
 In the browser console, `slop` is the running game:
 
 ```js
-slop.dev.quickStart()        // new city without the menu
-slop.dev.buildDemo()         // lay out a sample town
-slop.dev.runDays(365 * 5)    // fast-forward five years
-slop.dev.place('stadium', 40, 40)
-slop.sim.disasters.trigger('tornado')
+slop.dev.quickStart(); // new city without the menu
+slop.dev.buildDemo(); // lay out a sample town
+slop.dev.runDays(365 * 5); // fast-forward five years
+slop.dev.place('stadium', 40, 40);
+slop.sim.disasters.trigger('tornado');
 ```
 
 SlopCity 3000 is a fan project and is not affiliated with Maxis or Electronic Arts.

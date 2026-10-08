@@ -136,7 +136,9 @@ const rubble: ModelFn = (g, c) => {
     const sx = 0.04 + r.next() * 0.07;
     const sz = 0.03 + r.next() * 0.05;
     const sy = 0.02 + r.next() * 0.04;
-    g.push().translate(x, 0, z).rotateY(r.next() * Math.PI);
+    g.push()
+      .translate(x, 0, z)
+      .rotateY(r.next() * Math.PI);
     g.noWin().color(r.pick(cols)).box(-sx, 0, -sz, sx, sy, sz);
     g.pop();
   }
@@ -144,7 +146,9 @@ const rubble: ModelFn = (g, c) => {
   g.color(0x2f2b28).pyramid(0.65, 0.62, 0.22, 0.2, 0, 0.06);
   g.color(0x26231f).pyramid(0.3, 0.72, 0.16, 0.14, 0, 0.045);
   // a broken wall fragment still standing
-  g.push().translate(0.25 + r.next() * 0.5, 0, 0.25).rotateY(r.next() * 0.6 - 0.3);
+  g.push()
+    .translate(0.25 + r.next() * 0.5, 0, 0.25)
+    .rotateY(r.next() * 0.6 - 0.3);
   g.color(r.pick(cols)).box(-0.12, 0, -0.015, 0.1, 0.1 + r.next() * 0.06, 0.015);
   g.pop();
   // charred beam
@@ -156,10 +160,17 @@ const rubble: ModelFn = (g, c) => {
 /** Wooden power pole at the tile centre, crossarm along x, insulators at x=0.4/0.6, y≈0.5. */
 const powerPole: ModelFn = (g) => {
   g.noWin().color(PAL.pole);
-  g.lathe(0.5, 0.5, [
-    [0.022, 0],
-    [0.016, 0.56],
-  ], 4, Math.PI / 4, true);
+  g.lathe(
+    0.5,
+    0.5,
+    [
+      [0.022, 0],
+      [0.016, 0.56],
+    ],
+    4,
+    Math.PI / 4,
+    true,
+  );
   g.color(shade(PAL.pole, 0.85));
   g.box(0.38, 0.465, 0.488, 0.62, 0.485, 0.512);
   g.color(0xcfd6dc);
@@ -188,7 +199,9 @@ const landfill: ModelFn = (g, c) => {
     [0.18, hgt * 0.95],
     [0, hgt * 1.05],
   ];
-  g.noWin().color(0x7d6e5a).lathe(0.5, 0.5, prof, 7, r.next() * Math.PI);
+  g.noWin()
+    .color(0x7d6e5a)
+    .lathe(0.5, 0.5, prof, 7, r.next() * Math.PI);
   const junk = [0xd6453d, 0x3f7fd6, 0xf2c94c, 0xf7f7f2, 0x4caf50, 0x8e5bd6, 0x9a958c, 0x5a3a28];
   const n = 2 + level * 2;
   for (let i = 0; i < n; i++) {

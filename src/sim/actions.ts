@@ -42,7 +42,7 @@ function finish(sim: Sim, kind: string, tiles: PlanTile[], cost: number, apply: 
     ok = false;
     reason = 'Not enough money';
   }
-  return { kind, tiles, cost, ok, reason: ok ? undefined : reason ?? (anyChange ? undefined : 'Nothing to do here'), apply };
+  return { kind, tiles, cost, ok, reason: ok ? undefined : (reason ?? (anyChange ? undefined : 'Nothing to do here')), apply };
 }
 
 function rectTiles(x0: number, y0: number, x1: number, y1: number): [number, number][] {
@@ -231,34 +231,43 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
       }
     }
   }
-  return finish(sim, kind, tiles, cost, () => {
-    if (!sim.spend(cost)) return;
-    for (const t of tiles) {
-      if (!t.ok || !t.change) continue;
-      const i = w.idx(t.x, t.y);
-      w.net[i] |= flag;
-      if (kind !== 'pipe') {
-        w.tree[i] = 0;
-        w.rubble[i] = 0;
-        if (w.zone[i]) w.setZone(t.x, t.y, 0, 0);
+  return finish(
+    sim,
+    kind,
+    tiles,
+    cost,
+    () => {
+      if (!sim.spend(cost)) return;
+      for (const t of tiles) {
+        if (!t.ok || !t.change) continue;
+        const i = w.idx(t.x, t.y);
+        w.net[i] |= flag;
+        if (kind !== 'pipe') {
+          w.tree[i] = 0;
+          w.rubble[i] = 0;
+          if (w.zone[i]) w.setZone(t.x, t.y, 0, 0);
+        }
+        w.markArea(t.x, t.y, t.x, t.y, kind === 'pipe' ? DIRTY_PIPES : DIRTY_GROUND | DIRTY_OBJECTS);
       }
-      w.markArea(t.x, t.y, t.x, t.y, kind === 'pipe' ? DIRTY_PIPES : DIRTY_GROUND | DIRTY_OBJECTS);
-    }
-    w.tilesDirty = true;
-    if (kind === 'road') sim.dirty.roads = true;
-    if (kind === 'road' || kind === 'rail') w.roadVersion++;
-    sim.dirty.power = true;
-    sim.dirty.water = true;
-    sim.events.emit('sound', 'build');
-  }, reason);
+      w.tilesDirty = true;
+      if (kind === 'road') sim.dirty.roads = true;
+      if (kind === 'road' || kind === 'rail') w.roadVersion++;
+      sim.dirty.power = true;
+      sim.dirty.water = true;
+      sim.events.emit('sound', 'build');
+    },
+    reason,
+  );
 }
 
 // ------------------------------------------------------------- buildings
 
 export function isAvailable(sim: Sim, def: BuildingDef): { ok: boolean; why?: string } {
   if (def.year && sim.year < def.year) return { ok: false, why: `Available in ${def.year}` };
-  if (def.reward && !sim.city.unlocked.includes(def.id)) return { ok: false, why: `Unlocks at ${def.reward.toLocaleString('en-US')} residents` };
-  if (def.id === 'nuclear_plant' && sim.city.ordinances.nuclear_free) return { ok: false, why: 'Banned by the Nuclear Free Zone ordinance' };
+  if (def.reward && !sim.city.unlocked.includes(def.id))
+    return { ok: false, why: `Unlocks at ${def.reward.toLocaleString('en-US')} residents` };
+  if (def.id === 'nuclear_plant' && sim.city.ordinances.nuclear_free)
+    return { ok: false, why: 'Banned by the Nuclear Free Zone ordinance' };
   if (def.reward && def.id !== 'arcology') {
     for (const b of sim.world.buildings.values()) if (b.def === def.id) return { ok: false, why: 'Already built' };
   }
@@ -357,36 +366,43 @@ export function planPlace(sim: Sim, defId: string, x: number, y: number, rot: nu
   }
   if (!allOk) for (const t of tiles) t.ok = false;
   const cost = def.cost ?? 0;
-  const plan = finish(sim, 'place', tiles, cost, () => {
-    if (!sim.spend(cost)) return;
-    for (const t of tiles) {
-      const i = w.idx(t.x, t.y);
-      if (w.zone[i]) w.setZone(t.x, t.y, 0, 0);
-    }
-    const b = w.addBuilding({
-      def: def.id,
-      x,
-      y,
-      w: fw,
-      h: fh,
-      rot: r,
-      variant: sim.rng.int(0, 7),
-      seed: sim.rng.int(0, 255),
-      pop: 0,
-      build: 0,
-      powered: false,
-      watered: false,
-      abandoned: false,
-      fire: 0,
-      age: 0,
-      unhappy: 0,
-    });
-    sim.dirty.power = true;
-    sim.dirty.water = true;
-    sim.dirty.coverage = true;
-    sim.events.emit('building', { type: 'add', b });
-    sim.events.emit('sound', 'build');
-  }, reason);
+  const plan = finish(
+    sim,
+    'place',
+    tiles,
+    cost,
+    () => {
+      if (!sim.spend(cost)) return;
+      for (const t of tiles) {
+        const i = w.idx(t.x, t.y);
+        if (w.zone[i]) w.setZone(t.x, t.y, 0, 0);
+      }
+      const b = w.addBuilding({
+        def: def.id,
+        x,
+        y,
+        w: fw,
+        h: fh,
+        rot: r,
+        variant: sim.rng.int(0, 7),
+        seed: sim.rng.int(0, 255),
+        pop: 0,
+        build: 0,
+        powered: false,
+        watered: false,
+        abandoned: false,
+        fire: 0,
+        age: 0,
+        unhappy: 0,
+      });
+      sim.dirty.power = true;
+      sim.dirty.water = true;
+      sim.dirty.coverage = true;
+      sim.events.emit('building', { type: 'add', b });
+      sim.events.emit('sound', 'build');
+    },
+    reason,
+  );
   plan.def = def;
   plan.x = x;
   plan.y = y;
@@ -573,38 +589,45 @@ export function planTerraform(sim: Sim, mode: TerraformMode, x0: number, y0: num
       if (w.inBounds(x, y)) tiles.push({ x, y, ok: !reason, change: changed.length > 0 });
     }
   }
-  return finish(sim, 'terraform', tiles, cost, () => {
-    if (reason || !sim.spend(cost)) return;
-    let minX = w.w;
-    let minY = w.h;
-    let maxX = 0;
-    let maxY = 0;
-    for (const [k, v] of changed) {
-      w.heights[k] = v;
-      const cx = k % W;
-      const cy = (k / W) | 0;
-      minX = Math.min(minX, cx - 1);
-      minY = Math.min(minY, cy - 1);
-      maxX = Math.max(maxX, cx);
-      maxY = Math.max(maxY, cy);
-    }
-    // water tiles cannot hold zones
-    for (let y = Math.max(0, minY); y <= Math.min(w.h - 1, maxY); y++) {
-      for (let x = Math.max(0, minX); x <= Math.min(w.w - 1, maxX); x++) {
-        if (w.isWater(x, y)) {
-          const i = w.idx(x, y);
-          if (w.zone[i]) w.setZone(x, y, 0, 0);
-          w.tree[i] = 0;
+  return finish(
+    sim,
+    'terraform',
+    tiles,
+    cost,
+    () => {
+      if (reason || !sim.spend(cost)) return;
+      let minX = w.w;
+      let minY = w.h;
+      let maxX = 0;
+      let maxY = 0;
+      for (const [k, v] of changed) {
+        w.heights[k] = v;
+        const cx = k % W;
+        const cy = (k / W) | 0;
+        minX = Math.min(minX, cx - 1);
+        minY = Math.min(minY, cy - 1);
+        maxX = Math.max(maxX, cx);
+        maxY = Math.max(maxY, cy);
+      }
+      // water tiles cannot hold zones
+      for (let y = Math.max(0, minY); y <= Math.min(w.h - 1, maxY); y++) {
+        for (let x = Math.max(0, minX); x <= Math.min(w.w - 1, maxX); x++) {
+          if (w.isWater(x, y)) {
+            const i = w.idx(x, y);
+            if (w.zone[i]) w.setZone(x, y, 0, 0);
+            w.tree[i] = 0;
+          }
         }
       }
-    }
-    w.markArea(minX, minY, maxX, maxY, DIRTY_GROUND | DIRTY_OBJECTS | DIRTY_PIPES);
-    w.heightsDirty = true;
-    w.tilesDirty = true;
-    sim.dirty.land = true;
-    sim.dirty.power = true;
-    sim.events.emit('sound', 'terraform');
-  }, reason);
+      w.markArea(minX, minY, maxX, maxY, DIRTY_GROUND | DIRTY_OBJECTS | DIRTY_PIPES);
+      w.heightsDirty = true;
+      w.tilesDirty = true;
+      sim.dirty.land = true;
+      sim.dirty.power = true;
+      sim.events.emit('sound', 'terraform');
+    },
+    reason,
+  );
 }
 
 export function applyPlan(plan: Plan): boolean {

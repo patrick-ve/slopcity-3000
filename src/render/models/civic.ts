@@ -107,10 +107,16 @@ function palm(g: G, r: Rng, x: number, z: number, s = 1): void {
   g.noWin().color(0x8a6a48);
   g.beam([x, 0, z], [x + 0.03 * s, 0.28 * s, z], 0.025 * s);
   g.color(r.pick([0x4f9a3c, 0x5fae45, 0x3f8a36]));
-  g.lathe(x + 0.03 * s, z, [
-    [0.15 * s, 0.24 * s],
-    [0, 0.31 * s],
-  ], 6, r.next() * 3);
+  g.lathe(
+    x + 0.03 * s,
+    z,
+    [
+      [0.15 * s, 0.24 * s],
+      [0, 0.31 * s],
+    ],
+    6,
+    r.next() * 3,
+  );
 }
 
 function car(g: G, x: number, z: number, hex: number, alongX = true, len = 0.2): void {
@@ -194,7 +200,17 @@ function redCross(g: G, cx: number, cy: number, zf: number, s: number): void {
 }
 
 /** Banded factory chimney with a smoke emitter on top. */
-function chimney(g: G, x: number, z: number, r0: number, r1: number, h: number, hex: number, band: number, kind: 'smoke' | 'steam' | 'dark' = 'smoke'): void {
+function chimney(
+  g: G,
+  x: number,
+  z: number,
+  r0: number,
+  r1: number,
+  h: number,
+  hex: number,
+  band: number,
+  kind: 'smoke' | 'steam' | 'dark' = 'smoke',
+): void {
   const rAt = (t: number) => r0 + (r1 - r0) * t;
   g.noWin().color(hex);
   g.frustum(x, z, r0, rAt(0.8), 0, h * 0.8, 8);
@@ -209,12 +225,17 @@ function chimney(g: G, x: number, z: number, r0: number, r1: number, h: number, 
 
 function tank(g: G, x: number, z: number, r: number, h: number, hex: number, segs = 10): void {
   g.noWin().color(hex);
-  g.lathe(x, z, [
-    [r, 0],
-    [r, h],
-    [r * 0.75, h + r * 0.12],
-    [0, h + r * 0.16],
-  ], segs);
+  g.lathe(
+    x,
+    z,
+    [
+      [r, 0],
+      [r, h],
+      [r * 0.75, h + r * 0.12],
+      [0, h + r * 0.16],
+    ],
+    segs,
+  );
 }
 
 /** Lattice transmission tower. */
@@ -232,13 +253,19 @@ function pylon(g: G, x: number, z: number, h: number): void {
 function boat(g: G, r: Rng, x: number, z0: number, len: number, w: number, sail: boolean): void {
   const hull = r.pick([0xf4f4ef, 0xe8e4dc, 0x3f6fb0, 0xd6453d]);
   g.noWin().color(hull);
-  prism(g, [
-    [x - w / 2, z0],
-    [x + w / 2, z0],
-    [x + w / 2, z0 + len * 0.7],
-    [x, z0 + len],
-    [x - w / 2, z0 + len * 0.7],
-  ], -0.1, -0.02, 0xd9cfb4);
+  prism(
+    g,
+    [
+      [x - w / 2, z0],
+      [x + w / 2, z0],
+      [x + w / 2, z0 + len * 0.7],
+      [x, z0 + len],
+      [x - w / 2, z0 + len * 0.7],
+    ],
+    -0.1,
+    -0.02,
+    0xd9cfb4,
+  );
   if (sail) {
     g.color(PAL.steelDark).box(x - 0.006, -0.02, z0 + len * 0.45 - 0.006, x + 0.006, 0.38, z0 + len * 0.45 + 0.006, { noTop: true });
     g.color(WHITE);
@@ -264,36 +291,56 @@ function airplane(g: G, x: number, z: number, len: number, yaw: number, tail: nu
   g.cylinderX(-len * 0.45, len * 0.42, y, 0, rr, 6);
   g.sphere(len * 0.42, y, 0, rr, 0, 1);
   // swept wings
-  prism(g, [
-    [len * 0.08, 0],
-    [-len * 0.14, -len * 0.48],
-    [-len * 0.22, -len * 0.48],
-    [-len * 0.12, 0],
-  ], y - 0.008, y + 0.004);
-  prism(g, [
-    [len * 0.08, 0],
-    [-len * 0.12, 0],
-    [-len * 0.22, len * 0.48],
-    [-len * 0.14, len * 0.48],
-  ], y - 0.008, y + 0.004);
+  prism(
+    g,
+    [
+      [len * 0.08, 0],
+      [-len * 0.14, -len * 0.48],
+      [-len * 0.22, -len * 0.48],
+      [-len * 0.12, 0],
+    ],
+    y - 0.008,
+    y + 0.004,
+  );
+  prism(
+    g,
+    [
+      [len * 0.08, 0],
+      [-len * 0.12, 0],
+      [-len * 0.22, len * 0.48],
+      [-len * 0.14, len * 0.48],
+    ],
+    y - 0.008,
+    y + 0.004,
+  );
   // engines
   g.color(0xb8bec4);
   g.cylinderX(-len * 0.06, len * 0.06, y - 0.03, -len * 0.2, len * 0.03, 5);
   g.cylinderX(-len * 0.06, len * 0.06, y - 0.03, len * 0.2, len * 0.03, 5);
   // stabilisers
   g.color(0xf2f2f0);
-  prism(g, [
-    [-len * 0.36, 0],
-    [-len * 0.46, -len * 0.16],
-    [-len * 0.5, -len * 0.16],
-    [-len * 0.45, 0],
-  ], y, y + 0.006);
-  prism(g, [
-    [-len * 0.36, 0],
-    [-len * 0.45, 0],
-    [-len * 0.5, len * 0.16],
-    [-len * 0.46, len * 0.16],
-  ], y, y + 0.006);
+  prism(
+    g,
+    [
+      [-len * 0.36, 0],
+      [-len * 0.46, -len * 0.16],
+      [-len * 0.5, -len * 0.16],
+      [-len * 0.45, 0],
+    ],
+    y,
+    y + 0.006,
+  );
+  prism(
+    g,
+    [
+      [-len * 0.36, 0],
+      [-len * 0.45, 0],
+      [-len * 0.5, len * 0.16],
+      [-len * 0.46, len * 0.16],
+    ],
+    y,
+    y + 0.006,
+  );
   // tail fin (double sided)
   g.color(tail);
   const fin: V3[] = [
@@ -455,13 +502,19 @@ const seaport: ModelFn = (g, c) => {
   // docked cargo ship
   const hull = r.pick([0x8f2f2f, 0x2f3f6f, 0x2f5f4f]);
   g.color(hull);
-  prism(g, [
-    [0.35, 4.12],
-    [2.95, 4.12],
-    [3.4, 4.28],
-    [2.95, 4.44],
-    [0.35, 4.44],
-  ], -0.3, 0.02, 0x9a958c);
+  prism(
+    g,
+    [
+      [0.35, 4.12],
+      [2.95, 4.12],
+      [3.4, 4.28],
+      [2.95, 4.44],
+      [0.35, 4.44],
+    ],
+    -0.3,
+    0.02,
+    0x9a958c,
+  );
   for (let i = 0; i < 5; i++) {
     g.color(r.pick(PAL.awnings));
     g.box(1.0 + i * 0.36, 0.02, 4.16, 1.32 + i * 0.36, 0.13, 4.4);
@@ -611,18 +664,32 @@ const gas_plant: ModelFn = (g, c) => {
 
 function coolingTower(g: G, x: number, z: number, s: number): void {
   g.noWin().color(0xdcd8d0);
-  g.lathe(x, z, [
-    [0.55 * s, 0],
-    [0.43 * s, 0.55 * s],
-    [0.37 * s, 0.95 * s],
-    [0.41 * s, 1.35 * s],
-  ], 12, 0, false);
+  g.lathe(
+    x,
+    z,
+    [
+      [0.55 * s, 0],
+      [0.43 * s, 0.55 * s],
+      [0.37 * s, 0.95 * s],
+      [0.41 * s, 1.35 * s],
+    ],
+    12,
+    0,
+    false,
+  );
   g.color(0x9f9b94);
-  g.lathe(x, z, [
-    [0.41 * s, 1.35 * s],
-    [0.37 * s, 1.35 * s],
-    [0.33 * s, 1.0 * s],
-  ], 12, 0, true);
+  g.lathe(
+    x,
+    z,
+    [
+      [0.41 * s, 1.35 * s],
+      [0.37 * s, 1.35 * s],
+      [0.33 * s, 1.0 * s],
+    ],
+    12,
+    0,
+    true,
+  );
   g.emitter(x, 1.4 * s, z, 'steam');
 }
 
@@ -682,20 +749,36 @@ const solar_plant: ModelFn = (g, c) => {
 };
 
 function dish(g: G, x: number, z: number, s: number): void {
-  g.noWin().color(0xb8bec4).cylinder(x, z, 0.1 * s, 0, 0.36 * s, 8);
+  g.noWin()
+    .color(0xb8bec4)
+    .cylinder(x, z, 0.1 * s, 0, 0.36 * s, 8);
   g.color(0xcfd4d8);
-  g.lathe(x, z, [
-    [0.12 * s, 0.36 * s],
-    [0.5 * s, 0.53 * s],
-    [0.7 * s, 0.76 * s],
-  ], 14, 0, false);
+  g.lathe(
+    x,
+    z,
+    [
+      [0.12 * s, 0.36 * s],
+      [0.5 * s, 0.53 * s],
+      [0.7 * s, 0.76 * s],
+    ],
+    14,
+    0,
+    false,
+  );
   g.color(0xf0f4f6);
-  g.lathe(x, z, [
-    [0.7 * s, 0.76 * s],
-    [0.66 * s, 0.76 * s],
-    [0.46 * s, 0.56 * s],
-    [0.1 * s, 0.43 * s],
-  ], 14, 0, true);
+  g.lathe(
+    x,
+    z,
+    [
+      [0.7 * s, 0.76 * s],
+      [0.66 * s, 0.76 * s],
+      [0.46 * s, 0.56 * s],
+      [0.1 * s, 0.43 * s],
+    ],
+    14,
+    0,
+    true,
+  );
   g.color(PAL.steel);
   g.beam([x, 0.43 * s, z], [x, 1.05 * s, z], 0.03);
   g.beam([x + 0.66 * s, 0.76 * s, z], [x, 1.05 * s, z], 0.015);
@@ -743,10 +826,17 @@ const fusion_plant: ModelFn = (g, c) => {
   g.color(0xc4ccd4);
   g.lathe(cx, cz, prof, 16, 0, false);
   g.color(0x2bb3a3);
-  g.lathe(cx, cz, [
-    [R + a0 + 0.01, yc - 0.04],
-    [R + a0 + 0.01, yc + 0.04],
-  ], 16, 0, false);
+  g.lathe(
+    cx,
+    cz,
+    [
+      [R + a0 + 0.01, yc - 0.04],
+      [R + a0 + 0.01, yc + 0.04],
+    ],
+    16,
+    0,
+    false,
+  );
   // core
   g.color(0xe8ecef).cylinder(cx, cz, 0.42, 0, 0.5, 12);
   dome(g, cx, cz, 0.42, 0.5, 0x7fd6cf, 12, 0.9);
@@ -798,13 +888,18 @@ const water_tower: ModelFn = (g, c) => {
   } else {
     g.noWin().color(shade(body, 0.92)).cylinder(0.5, 0.5, 0.07, 0, 0.56, 8);
     g.color(body);
-    g.lathe(0.5, 0.5, [
-      [0.06, 0.5],
-      [0.22, 0.62],
-      [0.28, 0.76],
-      [0.21, 0.9],
-      [0, 0.95],
-    ], 10);
+    g.lathe(
+      0.5,
+      0.5,
+      [
+        [0.06, 0.5],
+        [0.22, 0.62],
+        [0.28, 0.76],
+        [0.21, 0.9],
+        [0, 0.95],
+      ],
+      10,
+    );
   }
   g.color(PAL.concrete).box(0.38, 0, 0.75, 0.62, 0.08, 0.9, { top: PAL.flatRoof });
 };
@@ -964,7 +1059,9 @@ const clinic: ModelFn = (g, c) => {
   const wall = r.pick([0xf4f4ef, 0xeef2f0, 0xf2ece4]);
   g.color(wall).win(WIN.CIVIC, 0.11, FLOOR);
   g.box(0.15, 0, 0.16, 0.85, FLOOR * 2, 0.68, { top: PAL.flatRoof });
-  g.noWin().color(0x2bb3a3).box(0.14, FLOOR * 2, 0.15, 0.86, FLOOR * 2 + 0.03, 0.69, { top: PAL.flatRoof });
+  g.noWin()
+    .color(0x2bb3a3)
+    .box(0.14, FLOOR * 2, 0.15, 0.86, FLOOR * 2 + 0.03, 0.69, { top: PAL.flatRoof });
   redCross(g, 0.66, 0.19, 0.68, 0.1);
   g.color(0x2bb3a3).box(0.3, 0.11, 0.68, 0.52, 0.125, 0.8);
   g.color(PAL.steelDark).box(0.31, 0, 0.78, 0.325, 0.11, 0.795, { noTop: true });
@@ -985,7 +1082,9 @@ const hospital: ModelFn = (g, c) => {
   // front wing
   g.color(shade(wall, 0.96)).win(WIN.CIVIC, 0.12, FLOOR);
   g.box(0.25, 0, 1.4, 2.75, FLOOR * 2.5, 2.3, { top: PAL.flatRoof });
-  g.noWin().color(0x2bb3a3).box(0.24, FLOOR * 2.5, 1.39, 2.76, FLOOR * 2.5 + 0.03, 2.31, { top: PAL.flatRoof });
+  g.noWin()
+    .color(0x2bb3a3)
+    .box(0.24, FLOOR * 2.5, 1.39, 2.76, FLOOR * 2.5 + 0.03, 2.31, { top: PAL.flatRoof });
   // helipad
   const ty = FLOOR * 6;
   deck(g, 1.15, 0.5, 1.85, 1.2, ty + 0.012, 0x4a4d52);
@@ -1054,7 +1153,9 @@ const college: ModelFn = (g, c) => {
   // back hall
   g.color(brick).win(WIN.CIVIC, 0.12, FLOOR);
   g.box(0.2, 0, 0.12, 2.8, FLOOR * 2.8, 0.72, { noTop: true });
-  g.noWin().color(roof).gable(0.2, 0.12, 2.8, 0.72, FLOOR * 2.8, 0.18, 'x', 0.03, brick);
+  g.noWin()
+    .color(roof)
+    .gable(0.2, 0.12, 2.8, 0.72, FLOOR * 2.8, 0.18, 'x', 0.03, brick);
   // side halls
   const b2 = shade(brick, 1.08);
   g.color(b2).win(WIN.CIVIC, 0.12, FLOOR);
@@ -1090,7 +1191,9 @@ const college: ModelFn = (g, c) => {
 const library: ModelFn = (g, c) => {
   const r = c.rng;
   const stone = r.pick([STONE, 0xe2d9c4, 0xd9d4c8]);
-  g.noWin().color(STONE_DARK).box(0.12, 0, 0.1, 0.88, 0.035, 0.86, { top: shade(stone, 0.95) });
+  g.noWin()
+    .color(STONE_DARK)
+    .box(0.12, 0, 0.1, 0.88, 0.035, 0.86, { top: shade(stone, 0.95) });
   g.color(stone).win(WIN.CIVIC, 0.12, 0.2);
   g.box(0.18, 0.035, 0.14, 0.82, 0.28, 0.66, { noTop: true });
   columns(g, 0.24, 0.76, 0.77, 0.035, 0.28, 4, 0.024, stone);
@@ -1105,7 +1208,9 @@ const library: ModelFn = (g, c) => {
 const museum: ModelFn = (g, c) => {
   const r = c.rng;
   const stone = r.pick([STONE, 0xe2d9c4, 0xeee6d4]);
-  g.noWin().color(STONE_DARK).box(0.1, 0, 0.12, 1.9, 0.05, 1.72, { top: shade(stone, 0.94) });
+  g.noWin()
+    .color(STONE_DARK)
+    .box(0.1, 0, 0.12, 1.9, 0.05, 1.72, { top: shade(stone, 0.94) });
   g.color(stone).win(WIN.CIVIC, 0.13, 0.22);
   g.box(0.18, 0.05, 0.2, 1.82, 0.45, 1.32, { top: PAL.flatRoof });
   columns(g, 0.5, 1.5, 1.55, 0.05, 0.42, 6, 0.032, stone);
@@ -1276,7 +1381,9 @@ const marina: ModelFn = (g, c) => {
   const wall = r.pick([WHITE, 0xeef2f0, 0xf2ece4]);
   g.color(wall).win(WIN.RES, 0.12, FLOOR);
   g.box(1.08, 0, 0.18, 1.86, FLOOR * 1.6, 0.85, { noTop: true });
-  g.noWin().color(r.pick([PAL.roofs.blue, PAL.roofs.slate, PAL.roofs.green])).hip(1.08, 0.18, 1.86, 0.85, FLOOR * 1.6, 0.12, 0.03);
+  g.noWin()
+    .color(r.pick([PAL.roofs.blue, PAL.roofs.slate, PAL.roofs.green]))
+    .hip(1.08, 0.18, 1.86, 0.85, FLOOR * 1.6, 0.12, 0.03);
   flag(g, 1.0, 1.0, 0.45, r.pick([PAL.blue, PAL.red]));
   // boardwalk + piers over the water
   g.color(PAL.wood).box(0, -0.25, 1.35, 2, 0.03, 1.62, { top: 0xa47e58 });
@@ -1358,31 +1465,66 @@ const stadium: ModelFn = (g, c) => {
   const top = 0.56;
   deck(g, 0.05, 0.05, 3.95, 3.95, 0.012, 0xb9b4aa);
   g.noWin().color(0xd9d4c8);
-  g.lathe(cx, cz, [
-    [outer, 0],
-    [outer, top],
-  ], 20, 0, false);
+  g.lathe(
+    cx,
+    cz,
+    [
+      [outer, 0],
+      [outer, top],
+    ],
+    20,
+    0,
+    false,
+  );
   g.color(0xbfb9ad);
-  g.lathe(cx, cz, [
-    [outer, top],
-    [outer - 0.1, top],
-  ], 20, 0, false);
+  g.lathe(
+    cx,
+    cz,
+    [
+      [outer, top],
+      [outer - 0.1, top],
+    ],
+    20,
+    0,
+    false,
+  );
   const seatA = r.pick([0x3f7fd6, 0xd6453d, 0x4caf50, 0xe8873a]);
   g.color(seatA);
-  g.lathe(cx, cz, [
-    [outer - 0.1, top],
-    [1.38, 0.3],
-  ], 20, 0, false);
+  g.lathe(
+    cx,
+    cz,
+    [
+      [outer - 0.1, top],
+      [1.38, 0.3],
+    ],
+    20,
+    0,
+    false,
+  );
   g.color(shade(seatA, 0.75));
-  g.lathe(cx, cz, [
-    [1.38, 0.3],
-    [1.1, 0.1],
-  ], 20, 0, false);
+  g.lathe(
+    cx,
+    cz,
+    [
+      [1.38, 0.3],
+      [1.1, 0.1],
+    ],
+    20,
+    0,
+    false,
+  );
   g.color(0x6a6a6a);
-  g.lathe(cx, cz, [
-    [1.1, 0.1],
-    [1.08, 0.02],
-  ], 20, 0, false);
+  g.lathe(
+    cx,
+    cz,
+    [
+      [1.1, 0.1],
+      [1.08, 0.02],
+    ],
+    20,
+    0,
+    false,
+  );
   // pitch
   blob(g, r, cx, cz, 1.09, 1.09, 0.02, 0x5f9a3c, 20, 0);
   deck(g, 1.35, 1.48, 2.65, 2.52, 0.022, 0x79b94c);
@@ -1519,22 +1661,41 @@ const landmark_tower: ModelFn = (g, c) => {
   g.noWin();
   // observation pod
   g.color(main);
-  g.lathe(1, 1, [
-    [0.1, 4.05],
-    [0.42, 4.22],
-  ], 12, 0, false);
+  g.lathe(
+    1,
+    1,
+    [
+      [0.1, 4.05],
+      [0.42, 4.22],
+    ],
+    12,
+    0,
+    false,
+  );
   g.color(GLASS_TINT);
-  g.lathe(1, 1, [
-    [0.42, 4.22],
-    [0.48, 4.36],
-  ], 12, 0, false);
+  g.lathe(
+    1,
+    1,
+    [
+      [0.42, 4.22],
+      [0.48, 4.36],
+    ],
+    12,
+    0,
+    false,
+  );
   g.color(accent);
-  g.lathe(1, 1, [
-    [0.48, 4.36],
-    [0.4, 4.48],
-    [0.16, 4.58],
-    [0.08, 4.6],
-  ], 12);
+  g.lathe(
+    1,
+    1,
+    [
+      [0.48, 4.36],
+      [0.4, 4.48],
+      [0.16, 4.58],
+      [0.08, 4.6],
+    ],
+    12,
+  );
   // spire
   g.color(main).cone(1, 1, 0.07, 4.6, 5.9, 6);
   g.color(accent).sphere(1, 5.25, 1, 0.05, 0);

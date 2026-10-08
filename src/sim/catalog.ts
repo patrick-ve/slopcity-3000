@@ -1,14 +1,6 @@
 import type { Department, ServiceKind, ZoneKind } from './types';
 
-export type PlopCategory =
-  | 'transport'
-  | 'power'
-  | 'water'
-  | 'garbage'
-  | 'safety'
-  | 'healthEdu'
-  | 'parks'
-  | 'rewards';
+export type PlopCategory = 'transport' | 'power' | 'water' | 'garbage' | 'safety' | 'healthEdu' | 'parks' | 'rewards';
 
 export interface BuildingDef {
   id: string;

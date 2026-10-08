@@ -52,11 +52,19 @@ export function starterCity(sim: Sim): void {
   place(sim, 'coal_plant', 38, 31);
   for (const [x, y] of [
     [39, 30],
-    [15, 25], [26, 25], [37, 25],
-    [10, 20], [20, 20], [30, 20],
-    [10, 30], [20, 30],
-    [15, 15], [26, 15], [15, 35],
-  ]) line(sim, 'power', x, y, x, y);
+    [15, 25],
+    [26, 25],
+    [37, 25],
+    [10, 20],
+    [20, 20],
+    [30, 20],
+    [10, 30],
+    [20, 30],
+    [15, 15],
+    [26, 15],
+    [15, 35],
+  ])
+    line(sim, 'power', x, y, x, y);
   // water: pumps next to the plant (they need power) and pipes
   place(sim, 'water_pump', 42, 31);
   place(sim, 'water_pump', 42, 33);

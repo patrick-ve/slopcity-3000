@@ -58,7 +58,14 @@ function plopTools(cat: PlopCategory, icon: string): ToolSpec[] {
   }));
 }
 
-export const QUERY_TOOL: ToolSpec = { key: 'query', kind: 'query', name: 'Query', sub: 'Inspect a tile or building', icon: 'query', hotkey: 'Esc' };
+export const QUERY_TOOL: ToolSpec = {
+  key: 'query',
+  kind: 'query',
+  name: 'Query',
+  sub: 'Inspect a tile or building',
+  icon: 'query',
+  hotkey: 'Esc',
+};
 
 export const CATEGORIES: ToolCategory[] = [
   { id: 'query', name: 'Query', icon: 'query', tools: [QUERY_TOOL] },
@@ -115,7 +122,17 @@ export const CATEGORIES: ToolCategory[] = [
         density: d,
         group: 'Industrial',
       })),
-      { key: 'zone:L', kind: 'zone', name: 'Landfill', sub: `§${COSTS.landfill} per tile · stores garbage`, icon: 'garbage', color: ZONE_COLORS[4], zone: 4, density: 1, group: 'Special' },
+      {
+        key: 'zone:L',
+        kind: 'zone',
+        name: 'Landfill',
+        sub: `§${COSTS.landfill} per tile · stores garbage`,
+        icon: 'garbage',
+        color: ZONE_COLORS[4],
+        zone: 4,
+        density: 1,
+        group: 'Special',
+      },
     ],
   },
   {
@@ -124,7 +141,15 @@ export const CATEGORIES: ToolCategory[] = [
     icon: 'road',
     hotkey: 'R',
     tools: [
-      { key: 'line:road', kind: 'line', line: 'road', name: 'Road', sub: `§${COSTS.road}/tile · bridges §${COSTS.bridge}`, icon: 'road', hotkey: 'R' },
+      {
+        key: 'line:road',
+        kind: 'line',
+        line: 'road',
+        name: 'Road',
+        sub: `§${COSTS.road}/tile · bridges §${COSTS.bridge}`,
+        icon: 'road',
+        hotkey: 'R',
+      },
       { key: 'line:rail', kind: 'line', line: 'rail', name: 'Rail', sub: `§${COSTS.rail}/tile`, icon: 'rail' },
       ...plopTools('transport', 'transport'),
     ],
@@ -135,7 +160,15 @@ export const CATEGORIES: ToolCategory[] = [
     icon: 'power',
     hotkey: 'P',
     tools: [
-      { key: 'line:power', kind: 'line', line: 'power', name: 'Power Line', sub: `§${COSTS.powerLine}/tile · must cross roads`, icon: 'powerline', hotkey: 'P' },
+      {
+        key: 'line:power',
+        kind: 'line',
+        line: 'power',
+        name: 'Power Line',
+        sub: `§${COSTS.powerLine}/tile · must cross roads`,
+        icon: 'powerline',
+        hotkey: 'P',
+      },
       ...plopTools('power', 'power'),
     ],
   },
@@ -145,7 +178,15 @@ export const CATEGORIES: ToolCategory[] = [
     icon: 'water',
     hotkey: 'U',
     tools: [
-      { key: 'line:pipe', kind: 'line', line: 'pipe', name: 'Water Pipe', sub: `§${COSTS.pipe}/tile · underground`, icon: 'pipe', hotkey: 'U' },
+      {
+        key: 'line:pipe',
+        kind: 'line',
+        line: 'pipe',
+        name: 'Water Pipe',
+        sub: `§${COSTS.pipe}/tile · underground`,
+        icon: 'pipe',
+        hotkey: 'U',
+      },
       ...plopTools('water', 'water'),
     ],
   },
@@ -215,7 +256,9 @@ export class ToolController {
 
   get isDragTool(): boolean {
     const k = this.tool.kind;
-    return k === 'zone' || k === 'dezone' || k === 'bulldoze' || k === 'trees' || k === 'level' || k === 'line' || k === 'raise' || k === 'lower';
+    return (
+      k === 'zone' || k === 'dezone' || k === 'bulldoze' || k === 'trees' || k === 'level' || k === 'line' || k === 'raise' || k === 'lower'
+    );
   }
 
   move(hit: PickResult | null, shift: boolean): void {
@@ -387,7 +430,8 @@ export class ToolController {
     preview.showTiles(tiles);
     // tooltip
     let text = t.name;
-    if (t.kind === 'zone' || t.kind === 'line' || t.kind === 'trees' || t.kind === 'dezone') text += changeCount ? ` · ${changeCount} tile${changeCount === 1 ? '' : 's'}` : '';
+    if (t.kind === 'zone' || t.kind === 'line' || t.kind === 'trees' || t.kind === 'dezone')
+      text += changeCount ? ` · ${changeCount} tile${changeCount === 1 ? '' : 's'}` : '';
     this.tooltip = { text, cost: plan.cost > 0 ? plan.cost : undefined, bad: plan.ok ? undefined : plan.reason };
   }
 }

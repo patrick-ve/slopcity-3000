@@ -276,7 +276,11 @@ export class Sim {
     this.city.loans.push(loan);
     this.city.funds += amount;
     this.events.emit('funds', this.city.funds);
-    this.events.emit('message', { title: 'Bond issued', text: `You borrowed §${amount.toLocaleString('en-US')} at ${(rate * 100).toFixed(1)}% interest.`, kind: 'info' });
+    this.events.emit('message', {
+      title: 'Bond issued',
+      text: `You borrowed §${amount.toLocaleString('en-US')} at ${(rate * 100).toFixed(1)}% interest.`,
+      kind: 'info',
+    });
     return loan;
   }
 

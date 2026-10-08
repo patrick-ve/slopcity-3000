@@ -95,11 +95,16 @@ function waterTank(g: G, x: number, z: number, y: number, s = 1): void {
   g.noWin().color(0x5c4a3a);
   g.box(x - 0.04 * s, y, z - 0.04 * s, x + 0.04 * s, y + 0.05 * s, z + 0.04 * s, { noTop: true });
   g.color(0x8a6a4a);
-  g.lathe(x, z, [
-    [0.05 * s, y + 0.05 * s],
-    [0.05 * s, y + 0.13 * s],
-    [0, y + 0.17 * s],
-  ], 6);
+  g.lathe(
+    x,
+    z,
+    [
+      [0.05 * s, y + 0.05 * s],
+      [0.05 * s, y + 0.13 * s],
+      [0, y + 0.17 * s],
+    ],
+    6,
+  );
 }
 
 function car(g: G, x: number, z: number, alongX: boolean, hex: number): void {
@@ -156,9 +161,25 @@ function parking(g: G, c: ModelCtx, x0: number, z0: number, x1: number, z1: numb
 /** Sloped awning sticking out of a +z facade. */
 function awning(g: G, x0: number, x1: number, z: number, y: number, depth: number, hex: number): void {
   g.noWin().color(hex);
-  g.face([[x0, y, z], [x0, y - 0.04, z + depth], [x1, y - 0.04, z + depth], [x1, y, z]], [0, 1, 0.6]);
+  g.face(
+    [
+      [x0, y, z],
+      [x0, y - 0.04, z + depth],
+      [x1, y - 0.04, z + depth],
+      [x1, y, z],
+    ],
+    [0, 1, 0.6],
+  );
   g.color(shade(hex, 0.8));
-  g.face([[x0, y - 0.04, z + depth], [x1, y - 0.04, z + depth], [x1, y - 0.065, z + depth], [x0, y - 0.065, z + depth]], [0, 0, 1]);
+  g.face(
+    [
+      [x0, y - 0.04, z + depth],
+      [x1, y - 0.04, z + depth],
+      [x1, y - 0.065, z + depth],
+      [x0, y - 0.065, z + depth],
+    ],
+    [0, 0, 1],
+  );
 }
 
 /** Thin double-sided fence around a rectangle (front side optional). */
@@ -171,7 +192,9 @@ function fence(g: G, x0: number, z0: number, x1: number, z1: number, h: number, 
 }
 
 function hedge(g: G, x0: number, z0: number, x1: number, z1: number, h = 0.05): void {
-  g.noWin().color(PAL.hedge).box(x0, 0, z0, x1, h, z1, { top: shade(PAL.hedge, 1.15) });
+  g.noWin()
+    .color(PAL.hedge)
+    .box(x0, 0, z0, x1, h, z1, { top: shade(PAL.hedge, 1.15) });
 }
 
 /** Tapered chimney with optional red band and smoke emitter. */
@@ -198,11 +221,16 @@ function chimney(
 /** Cylindrical storage tank with a shallow conical roof. */
 function tank(g: G, x: number, z: number, r: number, h: number, hex: number, y0 = 0, segs = 8): void {
   g.noWin().color(hex);
-  g.lathe(x, z, [
-    [r, y0],
-    [r, y0 + h],
-    [0, y0 + h + r * 0.28],
-  ], segs);
+  g.lathe(
+    x,
+    z,
+    [
+      [r, y0],
+      [r, y0 + h],
+      [0, y0 + h + r * 0.28],
+    ],
+    segs,
+  );
 }
 
 /** Saw-tooth factory roof; the glazed faces look toward +z. */
@@ -212,9 +240,31 @@ function sawtooth(g: G, x0: number, z0: number, x1: number, z1: number, y: numbe
     const za = z0 + i * dz;
     const zb = za + dz;
     g.noWin().color(roof);
-    g.face([[x0, y, za], [x1, y, za], [x1, y + ht, zb], [x0, y + ht, zb]], [0, 1, -1]);
-    g.face([[x1, y, za], [x1, y, zb], [x1, y + ht, zb]], [1, 0, 0]);
-    g.face([[x0, y, za], [x0, y, zb], [x0, y + ht, zb]], [-1, 0, 0]);
+    g.face(
+      [
+        [x0, y, za],
+        [x1, y, za],
+        [x1, y + ht, zb],
+        [x0, y + ht, zb],
+      ],
+      [0, 1, -1],
+    );
+    g.face(
+      [
+        [x1, y, za],
+        [x1, y, zb],
+        [x1, y + ht, zb],
+      ],
+      [1, 0, 0],
+    );
+    g.face(
+      [
+        [x0, y, za],
+        [x0, y, zb],
+        [x0, y + ht, zb],
+      ],
+      [-1, 0, 0],
+    );
     g.color(0xc8ccd0);
     g.wallQuad([x0, y, zb], [x1, y, zb], [x1, y + ht, zb], [x0, y + ht, zb], WIN.GLASS, 0.1, ht);
   }
@@ -266,11 +316,15 @@ function barrels(g: G, c: ModelCtx, x: number, z: number, n: number): void {
 }
 
 function antenna(g: G, x: number, z: number, y: number, h: number): void {
-  g.noWin().color(0x9aa0a6).beam([x, y, z], [x, y + h, z], 0.014);
+  g.noWin()
+    .color(0x9aa0a6)
+    .beam([x, y, z], [x, y + h, z], 0.014);
 }
 
 function spire(g: G, x: number, z: number, y: number, h: number, r = 0.04, hex = 0xc8ccd0): void {
-  g.noWin().color(hex).cone(x, z, r, y, y + h, 4, Math.PI / 4);
+  g.noWin()
+    .color(hex)
+    .cone(x, z, r, y, y + h, 4, Math.PI / 4);
 }
 
 /** Stack of centred tiers (setback tower). Returns the top height. */
@@ -444,10 +498,14 @@ const townhouse: ModelFn = (g, c) => {
     g.color(wall).win(WIN.RES, 0.1, F);
     if (c.wealth === 1) {
       g.box(ux0, 0, zb, ux1, top, zf, { noTop: true });
-      g.noWin().color(r.pick(PAL.roofList)).gable(ux0, zb, ux1, zf, top, 0.12 + r.next() * 0.05, 'z', 0.008, wall);
+      g.noWin()
+        .color(r.pick(PAL.roofList))
+        .gable(ux0, zb, ux1, zf, top, 0.12 + r.next() * 0.05, 'z', 0.008, wall);
     } else {
       g.box(ux0, 0, zb, ux1, top, zf, { top: r.pick([PAL.flatRoof, PAL.flatRoofDark, 0x7a746c]) });
-      g.noWin().color(light ? shade(wall, 0.7) : 0xe8e0d0).box(ux0, top - 0.02, zf, ux1, top + 0.012, zf + 0.025);
+      g.noWin()
+        .color(light ? shade(wall, 0.7) : 0xe8e0d0)
+        .box(ux0, top - 0.02, zf, ux1, top + 0.012, zf + 0.025);
     }
     const dx = ux0 + uw * (i % 2 === 0 ? 0.3 : 0.7);
     if (c.wealth === 2) {
@@ -477,7 +535,9 @@ const apartments: ModelFn = (g, c) => {
     const z0 = 0.2;
     const z1 = 1.15;
     block(g, x0, z0, x1, z1, 0, top, wall, PAL.flatRoofDark, WIN.RES, 0.12);
-    g.noWin().color(shade(wall, 0.72)).box(x0 - 0.012, top - 0.025, z1, x1 + 0.012, top + 0.012, z1 + 0.025);
+    g.noWin()
+      .color(shade(wall, 0.72))
+      .box(x0 - 0.012, top - 0.025, z1, x1 + 0.012, top + 0.012, z1 + 0.025);
     // fire escapes
     for (const fx of [0.5, 1.5]) {
       g.color(0x34363a);
@@ -558,7 +618,9 @@ const aptComplex: ModelFn = (g, c) => {
     ] as const) {
       block(g, 0.2, z0, 2.8, z1, 0, top, wall, PAL.flatRoofDark, WIN.RES, 0.11);
       for (const sx of [0.85, 2.15]) {
-        g.noWin().color(accent).box(sx - 0.08, 0, z1, sx + 0.08, top + 0.06, z1 + 0.06, { top: shade(accent, 0.85) });
+        g.noWin()
+          .color(accent)
+          .box(sx - 0.08, 0, z1, sx + 0.08, top + 0.06, z1 + 0.06, { top: shade(accent, 0.85) });
         frontQuad(g, sx - 0.035, sx + 0.035, 0, 0.1, z1 + 0.062, DOOR);
       }
     }
@@ -566,7 +628,15 @@ const aptComplex: ModelFn = (g, c) => {
     // playground
     g.rect(1.9, 2.05, 2.8, 2.85, 0.013, 0xd8c8a0);
     g.noWin().color(PAL.red).box(2.05, 0, 2.25, 2.15, 0.09, 2.35);
-    g.color(PAL.yellow).face([[2.15, 0.09, 2.25], [2.15, 0.09, 2.35], [2.4, 0.015, 2.35], [2.4, 0.015, 2.25]], [0.4, 1, 0]);
+    g.color(PAL.yellow).face(
+      [
+        [2.15, 0.09, 2.25],
+        [2.15, 0.09, 2.35],
+        [2.4, 0.015, 2.35],
+        [2.4, 0.015, 2.25],
+      ],
+      [0.4, 1, 0],
+    );
     g.color(0x3f7fd6);
     g.beam([2.3, 0, 2.55], [2.3, 0.12, 2.55], 0.012);
     g.beam([2.6, 0, 2.55], [2.6, 0.12, 2.55], 0.012);
@@ -599,7 +669,9 @@ const aptComplex: ModelFn = (g, c) => {
     ]) {
       g.color(shade(wall, 0.92)).win(WIN.RES, 0.12, F);
       g.box(tx, 0, tz, tx + 0.35, top + F, tz + 0.35, { noTop: true });
-      g.noWin().color(towerRoof).pyramid(tx + 0.175, tz + 0.175, 0.39, 0.39, top + F, 0.2);
+      g.noWin()
+        .color(towerRoof)
+        .pyramid(tx + 0.175, tz + 0.175, 0.39, 0.39, top + F, 0.2);
     }
     // courtyard garden
     g.rect(0.75, 0.75, 2.25, 2.25, 0.012, shade(PAL.grass, 1.12));
@@ -645,7 +717,9 @@ const slimTower: ModelFn = (g, c) => {
       const wall = r.pick([...PAL.walls.brick, 0xb8b0a0, 0xa8a090]);
       top = r.int(8, 11) * F;
       block(g, 0.2, 0.2, 0.8, 0.8, 0, top, wall, PAL.flatRoofDark, WIN.RES, 0.11);
-      g.noWin().color(shade(wall, 0.7)).box(0.19, top - 0.025, 0.19, 0.81, top + 0.012, 0.81, { noTop: true });
+      g.noWin()
+        .color(shade(wall, 0.7))
+        .box(0.19, top - 0.025, 0.19, 0.81, top + 0.012, 0.81, { noTop: true });
       waterTank(g, 0.36, 0.36, top);
       g.color(0x8f8a84).box(0.52, top, 0.5, 0.7, top + 0.08, 0.7);
     } else if (c.wealth === 1) {
@@ -681,17 +755,23 @@ const slimTower: ModelFn = (g, c) => {
       const wall = r.pick([0x5a6068, 0x6a6058, 0x4f5862, 0x7a7068]);
       top = r.int(10, 13) * F;
       block(g, 0.22, 0.22, 0.78, 0.78, 0, top, wall, PAL.flatRoofDark, WIN.OFFICE, 0.12);
-      g.noWin().color(shade(wall, 1.3)).box(0.2, top - F * 0.6, 0.2, 0.8, top + 0.04, 0.8, { top: shade(wall, 0.9) });
+      g.noWin()
+        .color(shade(wall, 1.3))
+        .box(0.2, top - F * 0.6, 0.2, 0.8, top + 0.04, 0.8, { top: shade(wall, 0.9) });
       antenna(g, 0.5, 0.5, top + 0.04, 0.35);
     } else {
       const wall = r.pick(GLASS_WALLS);
       top = r.int(11, 14) * F;
       block(g, 0.15, 0.15, 0.85, 0.85, 0, F * 1.3, PAL.concreteDark, PAL.flatRoof, WIN.SHOP, 0.2, F * 1.3);
       block(g, 0.22, 0.22, 0.78, 0.78, F * 1.3, top, wall, GLASS_ROOF, WIN.GLASS, 0.12);
-      g.noWin().color(PAL.white).box(0.2, F * 1.3, 0.75, 0.25, top + 0.05, 0.8, { top: PAL.white });
+      g.noWin()
+        .color(PAL.white)
+        .box(0.2, F * 1.3, 0.75, 0.25, top + 0.05, 0.8, { top: PAL.white });
       g.color(shade(wall, 0.85)).shed(0.22, 0.22, 0.78, 0.78, top, 0.22, false);
     }
-    g.noWin().color(0x6a6e72).box(0.36, F * 0.75, 0.78, 0.64, F * 0.82, 0.9);
+    g.noWin()
+      .color(0x6a6e72)
+      .box(0.36, F * 0.75, 0.78, 0.64, F * 0.82, 0.9);
   }
 };
 
@@ -704,7 +784,9 @@ const resTower: ModelFn = (g, c) => {
     const top = floors * F;
     block(g, 0.62, 0.3, 1.38, 1.7, 0, top, wall, PAL.flatRoofDark, WIN.RES, 0.11);
     block(g, 0.3, 0.62, 1.7, 1.38, 0, top - F, wall, PAL.flatRoofDark, WIN.RES, 0.11);
-    g.noWin().color(0x8f8a84).box(0.85, top, 0.85, 1.15, top + 0.1, 1.15);
+    g.noWin()
+      .color(0x8f8a84)
+      .box(0.85, top, 0.85, 1.15, top + 0.1, 1.15);
     frontQuad(g, 0.94, 1.06, 0, 0.1, 1.702, DOOR);
     g.rect(0.95, 1.7, 1.05, 1.97, 0.012, PAL.sidewalk);
     // basketball court
@@ -724,11 +806,15 @@ const resTower: ModelFn = (g, c) => {
     const rail = r.pick([PAL.white, 0xd8d4cc, 0xe8dcc4]);
     bands(g, 0, 0.45, 1.55, 1.3, ph + F - 0.006, floors - 1, F, rail);
     bands(g, 1, 0.45, 1.55, 0.6, ph + 2 * F - 0.006, Math.floor((floors - 1) / 2), 2 * F, rail);
-    g.noWin().color(0x8f8a84).box(0.8, top, 0.8, 1.2, top + 0.1, 1.1);
+    g.noWin()
+      .color(0x8f8a84)
+      .box(0.8, top, 0.8, 1.2, top + 0.1, 1.1);
     antenna(g, 1.4, 0.75, top, 0.3);
     roofTree(g, c, 0.4, 1.5, ph, 0.6);
     roofTree(g, c, 1.6, 1.5, ph, 0.6);
-    g.noWin().color(0x6a6e72).box(0.85, ph * 0.62, 1.7, 1.15, ph * 0.68, 1.85);
+    g.noWin()
+      .color(0x6a6e72)
+      .box(0.85, ph * 0.62, 1.7, 1.15, ph * 0.68, 1.85);
     g.rect(0.9, 1.7, 1.1, 1.97, 0.012, PAL.sidewalk);
   } else {
     const wall = r.pick(PAL.walls.high);
@@ -742,14 +828,17 @@ const resTower: ModelFn = (g, c) => {
     block(g, 0.55, 0.55, 1.45, 1.45, F, mid, wall, roof, WIN.GLASS, 0.13);
     block(g, 0.65, 0.65, 1.35, 1.35, mid, top, wall, roof, WIN.GLASS, 0.13);
     g.rect(0.75, 0.75, 1.25, 1.1, top + 0.007, POOL);
-    g.noWin().color(shade(wall, 0.95)).box(0.64, top, 1.25, 1.36, top + 0.1, 1.36, { top: roof });
+    g.noWin()
+      .color(shade(wall, 0.95))
+      .box(0.64, top, 1.25, 1.36, top + 0.1, 1.36, { top: roof });
     fountain(g, 1.0, 1.72, 0.08);
     for (const [tx, tz] of [
       [0.25, 0.25],
       [1.75, 0.25],
       [0.25, 1.75],
       [1.75, 1.75],
-    ]) lotTree(g, c, tx, tz, 1.0 + r.next() * 0.3);
+    ])
+      lotTree(g, c, tx, tz, 1.0 + r.next() * 0.3);
   }
 };
 
@@ -767,7 +856,9 @@ const resMegatower: ModelFn = (g, c) => {
       const sx = 0.4 + i * 0.48 + r.next() * 0.1;
       const y0 = F + r.int(1, 6) * F;
       const y1 = Math.min(top - F, y0 + r.int(4, 10) * F);
-      g.noWin().color(r.pick(PAL.walls.pastel)).box(sx, y0, 2.15, sx + 0.12, y1, 2.17);
+      g.noWin()
+        .color(r.pick(PAL.walls.pastel))
+        .box(sx, y0, 2.15, sx + 0.12, y1, 2.17);
     }
     g.color(0x8f8a84).box(0.6, top, 1.3, 0.95, top + 0.14, 1.7);
     g.color(0x8f8a84).box(2.0, top, 1.3, 2.35, top + 0.14, 1.7);
@@ -807,11 +898,21 @@ const resMegatower: ModelFn = (g, c) => {
     g.rect(0.06, 0.06, 2.94, 2.94, 0.012, 0xd8d2c4);
     g.color(shade(wall, 0.85)).win(WIN.SHOP, 0.22, F * 1.2);
     g.box(0.9, 0, 0.9, 2.1, F * 1.2, 2.1, { noTop: true });
-    const y = tiers(g, 1.5, 1.5, F * 1.2, [
-      [0.75, 0.75, top * 0.6],
-      [0.62, 0.62, top * 0.85],
-      [0.48, 0.48, top],
-    ], wall, roof, WIN.GLASS, 0.13);
+    const y = tiers(
+      g,
+      1.5,
+      1.5,
+      F * 1.2,
+      [
+        [0.75, 0.75, top * 0.6],
+        [0.62, 0.62, top * 0.85],
+        [0.48, 0.48, top],
+      ],
+      wall,
+      roof,
+      WIN.GLASS,
+      0.13,
+    );
     g.rect(0.8, 0.8, 2.2, 0.86, top * 0.6 + 0.006, ROOF_GREEN);
     roofTree(g, c, 0.85, 0.85, top * 0.6, 0.55);
     roofTree(g, c, 2.15, 2.15, top * 0.6, 0.55);
@@ -824,7 +925,8 @@ const resMegatower: ModelFn = (g, c) => {
       [2.7, 2.7],
       [1.6, 2.7],
       [0.3, 1.5],
-    ]) lotTree(g, c, tx, tz, 1.1 + r.next() * 0.3);
+    ])
+      lotTree(g, c, tx, tz, 1.1 + r.next() * 0.3);
   }
 };
 
@@ -863,7 +965,9 @@ const shop: ModelFn = (g, c) => {
     const stripe = r.pick([PAL.red, PAL.blue, 0x2bb3a3, PAL.orange]);
     g.color(body).win(WIN.SHOP, 0.12, F * 0.9);
     g.box(0.12, 0, 0.18, 0.88, F * 0.9, 0.5, { noTop: true });
-    g.noWin().color(stripe).box(0.115, F * 0.74, 0.175, 0.885, F * 0.92, 0.505, { top: 0xb8bcc0 });
+    g.noWin()
+      .color(stripe)
+      .box(0.115, F * 0.74, 0.175, 0.885, F * 0.92, 0.505, { top: 0xb8bcc0 });
     g.color(0x9aa0a6).beam([0.8, F * 0.92, 0.25], [0.8, 0.44, 0.25], 0.016);
     g.color(stripe).box(0.64, 0.36, 0.23, 0.96, 0.46, 0.27, { top: PAL.white });
     g.rect(0.04, 0.52, 0.96, 0.78, 0.012, PAL.asphalt);
@@ -877,7 +981,9 @@ const shop: ModelFn = (g, c) => {
     g.box(0.15, 0, 0.22, 0.85, F * 1.1, 0.76, { noTop: true });
     g.win(WIN.CIVIC, 0.13, F);
     g.box(0.15, F * 1.1, 0.22, 0.85, F * 2.1, 0.76, { noTop: true });
-    g.noWin().color(PAL.roofs.slate).hip(0.15, 0.22, 0.85, 0.76, F * 2.1, 0.12, 0.02);
+    g.noWin()
+      .color(PAL.roofs.slate)
+      .hip(0.15, 0.22, 0.85, 0.76, F * 2.1, 0.12, 0.02);
     awning(g, 0.18, 0.82, 0.76, F * 1.1 - 0.01, 0.09, aw);
     lotTree(g, c, 0.1, 0.88, 0.6);
     lotTree(g, c, 0.9, 0.88, 0.6);
@@ -900,7 +1006,8 @@ const gasStation: ModelFn = (g, c) => {
     [cx1 - 0.08, cz0 + 0.1],
     [cx0 + 0.08, cz1 - 0.1],
     [cx1 - 0.08, cz1 - 0.1],
-  ]) g.box(px - 0.012, 0, pz - 0.012, px + 0.012, ch, pz + 0.012, { noTop: true });
+  ])
+    g.box(px - 0.012, 0, pz - 0.012, px + 0.012, ch, pz + 0.012, { noTop: true });
   g.color(brand).box(cx0, ch, cz0, cx1, ch + 0.035, cz1, { top: PAL.white });
   for (const pz of [0.56, 0.76]) {
     g.color(0xd0d0cc).box(0.28, 0, pz - 0.02, 0.52, 0.015, pz + 0.02);
@@ -908,7 +1015,9 @@ const gasStation: ModelFn = (g, c) => {
   }
   g.color(PAL.white).win(WIN.SHOP, 0.15, F * 0.85);
   g.box(0.62, 0, 0.08, 0.92, F * 0.85, 0.36, { top: PAL.flatRoof });
-  g.noWin().color(brand).box(0.615, F * 0.85 - 0.02, 0.075, 0.925, F * 0.85 + 0.015, 0.365, { noTop: true });
+  g.noWin()
+    .color(brand)
+    .box(0.615, F * 0.85 - 0.02, 0.075, 0.925, F * 0.85 + 0.015, 0.365, { noTop: true });
   g.color(PAL.steel).beam([0.9, 0, 0.9], [0.9, 0.38, 0.9], 0.02);
   g.color(brand).box(0.84, 0.3, 0.88, 0.96, 0.42, 0.92, { top: PAL.white });
   car(g, 0.4, 0.66, true, r.pick(PAL.cars));
@@ -925,7 +1034,9 @@ const stripMall: ModelFn = (g, c) => {
     roofRim(g, 0.12, 0.12, 1.88, 0.95, h, PAL.flatRoof);
     g.color(shade(wall, 0.85)).box(0.11, 0, 0.94, 1.89, 0.03, 0.96);
     g.color(PAL.glassBlue).win(WIN.GLASS, 0.1, F).box(0.75, 0, 0.95, 1.25, F, 1.05, { top: brand });
-    g.noWin().color(brand).box(0.55, h - 0.02, 0.92, 1.45, h + 0.1, 0.97, { top: PAL.white });
+    g.noWin()
+      .color(brand)
+      .box(0.55, h - 0.02, 0.92, 1.45, h + 0.1, 0.97, { top: PAL.white });
     roofUnits(g, c, 0.12, 0.12, 1.88, 0.95, h, 3);
     parking(g, c, 0.1, 1.15, 1.9, 1.95, 6);
     g.color(PAL.steel).box(1.55, 0, 1.06, 1.75, 0.05, 1.1);
@@ -933,7 +1044,9 @@ const stripMall: ModelFn = (g, c) => {
     const wall = r.pick(PAL.walls.mid);
     g.color(wall).win(WIN.SHOP, 0.2, F * 1.1);
     g.box(0.12, 0, 0.15, 0.95, F * 1.1, 0.8, { noTop: true });
-    g.noWin().color(PAL.wood).gable(0.12, 0.15, 0.95, 0.8, F * 1.1, 0.12, 'x', 0.03, wall);
+    g.noWin()
+      .color(PAL.wood)
+      .gable(0.12, 0.15, 0.95, 0.8, F * 1.1, 0.12, 'x', 0.03, wall);
     awning(g, 0.18, 0.9, 0.8, F * 1.1 - 0.01, 0.1, r.pick(PAL.awnings));
     // greenhouse
     g.color(0xdfe8ea).win(WIN.GLASS, 0.1, F);
@@ -988,9 +1101,14 @@ const smallOffice: ModelFn = (g, c) => {
     g.color(shade(wall, 0.9)).win(WIN.SHOP, 0.2, F);
     g.box(0.15, 0, 0.18, 0.85, F, 0.8, { noTop: true });
     block(g, 0.15, 0.18, 0.85, 0.8, F, top, wall, PAL.flatRoof, WIN.OFFICE, brick ? 0.11 : 0.16);
-    if (brick) g.noWin().color(shade(wall, 0.72)).box(0.14, top - 0.02, 0.17, 0.86, top + 0.012, 0.81, { noTop: true });
+    if (brick)
+      g.noWin()
+        .color(shade(wall, 0.72))
+        .box(0.14, top - 0.02, 0.17, 0.86, top + 0.012, 0.81, { noTop: true });
     roofUnits(g, c, 0.15, 0.18, 0.85, 0.8, top, 2);
-    g.noWin().color(0x5a5e62).box(0.4, F * 0.75, 0.8, 0.6, F * 0.82, 0.9);
+    g.noWin()
+      .color(0x5a5e62)
+      .box(0.4, F * 0.75, 0.8, 0.6, F * 0.82, 0.9);
     lotTree(g, c, 0.08, 0.9, 0.7);
   }
 };
@@ -1009,7 +1127,9 @@ const office: ModelFn = (g, c) => {
     g.rect(1.0, 1.1, 1.6, 1.45, ph + 0.007, POOL);
     g.rect(0.95, 1.05, 1.65, 1.5, ph + 0.005, DECK);
     const sign = r.pick([PAL.red, 0xd4a017, 0x2a3f5f, 0x8e5bd6]);
-    g.noWin().color(sign).box(0.55, top, 0.92, 1.45, top + 0.14, 0.97, { top: shade(sign, 0.8) });
+    g.noWin()
+      .color(sign)
+      .box(0.55, top, 0.92, 1.45, top + 0.14, 0.97, { top: shade(sign, 0.8) });
     g.color(0x6a6e72).box(0.8, ph * 0.6, 1.55, 1.2, ph * 0.66, 1.78);
     g.color(PAL.steel);
     g.beam([0.83, 0, 1.75], [0.83, ph * 0.6, 1.75], 0.012);
@@ -1033,7 +1153,9 @@ const office: ModelFn = (g, c) => {
     const wall = r.pick(PAL.officeWalls);
     const top = r.int(5, 8) * F;
     block(g, 0.25, 0.2, 1.75, 1.35, 0, top, wall, PAL.flatRoof, WIN.OFFICE, 0.17);
-    g.noWin().color(shade(wall, 0.8)).box(0.7, top, 0.5, 1.3, top + 0.1, 0.95, { top: PAL.flatRoofDark });
+    g.noWin()
+      .color(shade(wall, 0.8))
+      .box(0.7, top, 0.5, 1.3, top + 0.1, 0.95, { top: PAL.flatRoofDark });
     roofUnits(g, c, 0.25, 0.95, 1.75, 1.35, top, 2);
     g.color(0x5a5e62).box(0.85, F * 0.78, 1.35, 1.15, F * 0.85, 1.48);
     parking(g, c, 0.1, 1.55, 1.9, 1.96, 5);
@@ -1051,7 +1173,9 @@ const mall: ModelFn = (g, c) => {
     g.color(stone).win(WIN.SHOP, 0.22, F * 1.3);
     g.box(0.2, 0, 0.2, 1.85, F * 1.3, 1.5, { noTop: true });
     block(g, 0.2, 0.2, 1.85, 1.5, F * 1.3, top, stone, PAL.flatRoof, WIN.CIVIC, 0.14);
-    g.noWin().color(shade(stone, 0.75)).box(0.18, top - 0.02, 0.18, 1.87, top + 0.015, 1.52, { noTop: true });
+    g.noWin()
+      .color(shade(stone, 0.75))
+      .box(0.18, top - 0.02, 0.18, 1.87, top + 0.015, 1.52, { noTop: true });
     for (const ax of [0.3, 0.85, 1.4]) awning(g, ax, ax + 0.35, 1.5, F * 1.2, 0.09, brand);
     g.color(brand).box(0.7, top, 1.42, 1.35, top + 0.13, 1.48, { top: PAL.white });
     // parking garage with cars on the top deck
@@ -1084,7 +1208,8 @@ const mall: ModelFn = (g, c) => {
       [0.5, 2.15],
       [2.85, 1.2],
       [1.4, 0.3],
-    ]) lotTree(g, c, tx, tz, 0.9 + r.next() * 0.4);
+    ])
+      lotTree(g, c, tx, tz, 0.9 + r.next() * 0.4);
     parking(g, c, 0.2, 2.35, 2.8, 2.9, 6);
   } else {
     const wall = r.pick([0xe0d4bc, 0xd8cbb0, 0xe8e2d4, 0xcfc6b0]);
@@ -1097,7 +1222,9 @@ const mall: ModelFn = (g, c) => {
       [2.2, 2.8],
     ] as const) {
       const brand = r.pick(PAL.awnings);
-      g.noWin().color(shade(wall, 0.92)).box(ax0, 0, 0.15, ax1, F * 2.1, 1.45, { top: PAL.flatRoofDark });
+      g.noWin()
+        .color(shade(wall, 0.92))
+        .box(ax0, 0, 0.15, ax1, F * 2.1, 1.45, { top: PAL.flatRoofDark });
       g.color(brand).box(ax0 + 0.1, F * 2.1 - 0.03, 1.42, ax1 - 0.1, F * 2.1 + 0.08, 1.47, { top: PAL.white });
     }
     g.color(PAL.glassBlue).win(WIN.GLASS, 0.1, F).box(1.3, 0, 1.35, 1.7, F, 1.45, { top: 0x6a6e72 });
@@ -1113,13 +1240,23 @@ const skyscraper: ModelFn = (g, c) => {
   if (c.wealth === 1) {
     const stone = r.pick([0xd8c9a8, 0xe0d4bc, 0xcfc0a0, 0xc9b9a0]);
     const n = r.int(20, 28) * F;
-    const top = tiers(g, 1, 1, 0, [
-      [0.72, 0.72, F * 2],
-      [0.62, 0.62, n * 0.58],
-      [0.5, 0.5, n * 0.78],
-      [0.38, 0.38, n * 0.9],
-      [0.27, 0.27, n],
-    ], stone, PAL.flatRoof, WIN.OFFICE, 0.09);
+    const top = tiers(
+      g,
+      1,
+      1,
+      0,
+      [
+        [0.72, 0.72, F * 2],
+        [0.62, 0.62, n * 0.58],
+        [0.5, 0.5, n * 0.78],
+        [0.38, 0.38, n * 0.9],
+        [0.27, 0.27, n],
+      ],
+      stone,
+      PAL.flatRoof,
+      WIN.OFFICE,
+      0.09,
+    );
     g.noWin().color(0xc0c4c8).pyramid(1, 1, 0.54, 0.54, top, 0.32);
     spire(g, 1, 1, top + 0.3, 0.5, 0.025);
     lotTree(g, c, 0.15, 0.15, 0.9);
@@ -1138,12 +1275,22 @@ const skyscraper: ModelFn = (g, c) => {
   } else {
     const wall = r.pick(PAL.officeWalls);
     const n = r.int(18, 26) * F;
-    const top = tiers(g, 1, 1, 0, [
-      [0.85, 0.85, F * 2],
-      [0.65, 0.65, n * 0.7],
-      [0.5, 0.5, n * 0.9],
-      [0.35, 0.35, n],
-    ], wall, PAL.flatRoof, WIN.OFFICE, 0.15);
+    const top = tiers(
+      g,
+      1,
+      1,
+      0,
+      [
+        [0.85, 0.85, F * 2],
+        [0.65, 0.65, n * 0.7],
+        [0.5, 0.5, n * 0.9],
+        [0.35, 0.35, n],
+      ],
+      wall,
+      PAL.flatRoof,
+      WIN.OFFICE,
+      0.15,
+    );
     roofUnits(g, c, 0.35, 0.35, 1.65, 1.65, n * 0.7, 2);
     antenna(g, 1, 1, top, 0.55);
   }
@@ -1158,15 +1305,27 @@ const megatower: ModelFn = (g, c) => {
     const n = r.int(34, 40) * F;
     block(g, 0.3, 0.9, 2.7, 2.1, 0, 3 * F, shade(wall, 0.85), PAL.flatRoof, WIN.SHOP, 0.22, F * 1.5);
     for (const cx of [0.95, 2.05]) {
-      const top = tiers(g, cx, 1.5, 3 * F, [
-        [0.42, 0.42, n * 0.6],
-        [0.34, 0.34, n * 0.82],
-        [0.26, 0.26, n * 0.94],
-        [0.17, 0.17, n],
-      ], wall, 0x9a9ea2, WIN.OFFICE, 0.1);
+      const top = tiers(
+        g,
+        cx,
+        1.5,
+        3 * F,
+        [
+          [0.42, 0.42, n * 0.6],
+          [0.34, 0.34, n * 0.82],
+          [0.26, 0.26, n * 0.94],
+          [0.17, 0.17, n],
+        ],
+        wall,
+        0x9a9ea2,
+        WIN.OFFICE,
+        0.1,
+      );
       spire(g, cx, 1.5, top, 0.9, 0.09, 0xd8dce0);
     }
-    g.noWin().color(0x8a8e92).box(1.37, n * 0.42, 1.44, 1.63, n * 0.45, 1.56, { top: 0x9a9ea2 });
+    g.noWin()
+      .color(0x8a8e92)
+      .box(1.37, n * 0.42, 1.44, 1.63, n * 0.45, 1.56, { top: 0x9a9ea2 });
     g.beam([1.37, n * 0.33, 1.5], [1.5, n * 0.42, 1.5], 0.02);
     g.beam([1.63, n * 0.33, 1.5], [1.5, n * 0.42, 1.5], 0.02);
     lotTree(g, c, 0.25, 0.3, 1.1);
@@ -1176,13 +1335,23 @@ const megatower: ModelFn = (g, c) => {
   } else if (c.wealth === 2) {
     const a = r.pick(GLASS_WALLS);
     const n = r.int(38, 45) * F;
-    const top = tiers(g, 1.5, 1.5, 0, [
-      [0.78, 0.78, n * 0.35],
-      [0.64, 0.64, n * 0.6],
-      [0.52, 0.52, n * 0.8],
-      [0.4, 0.4, n * 0.92],
-      [0.28, 0.28, n],
-    ], a, GLASS_ROOF, WIN.GLASS, 0.12);
+    const top = tiers(
+      g,
+      1.5,
+      1.5,
+      0,
+      [
+        [0.78, 0.78, n * 0.35],
+        [0.64, 0.64, n * 0.6],
+        [0.52, 0.52, n * 0.8],
+        [0.4, 0.4, n * 0.92],
+        [0.28, 0.28, n],
+      ],
+      a,
+      GLASS_ROOF,
+      WIN.GLASS,
+      0.12,
+    );
     spire(g, 1.5, 1.5, top, 1.3, 0.06, 0xd8dce0);
     pond(g, 0.3, 2.3, 1.1, 2.7);
     for (const [tx, tz] of [
@@ -1191,17 +1360,30 @@ const megatower: ModelFn = (g, c) => {
       [2.75, 2.75],
       [1.9, 2.75],
       [0.25, 1.5],
-    ]) lotTree(g, c, tx, tz, 1.1);
+    ])
+      lotTree(g, c, tx, tz, 1.1);
   } else {
     const wall = r.pick(PAL.officeWalls);
     const n = r.int(30, 36) * F;
-    const top = tiers(g, 1.5, 1.5, 0, [
-      [1.35, 1.35, 3 * F],
-      [1.05, 1.05, n * 0.6],
-      [0.85, 0.85, n * 0.85],
-      [0.65, 0.65, n],
-    ], wall, PAL.flatRoof, WIN.OFFICE, 0.15);
-    g.noWin().color(0x4a5048).cylinder(1.5, 1.5, 0.42, top, top + 0.025, 8, 0x5a6058);
+    const top = tiers(
+      g,
+      1.5,
+      1.5,
+      0,
+      [
+        [1.35, 1.35, 3 * F],
+        [1.05, 1.05, n * 0.6],
+        [0.85, 0.85, n * 0.85],
+        [0.65, 0.65, n],
+      ],
+      wall,
+      PAL.flatRoof,
+      WIN.OFFICE,
+      0.15,
+    );
+    g.noWin()
+      .color(0x4a5048)
+      .cylinder(1.5, 1.5, 0.42, top, top + 0.025, 8, 0x5a6058);
     g.rect(1.36, 1.47, 1.64, 1.53, top + 0.03, PAL.white);
     g.rect(1.3, 1.3, 1.36, 1.7, top + 0.03, PAL.white);
     g.rect(1.64, 1.3, 1.7, 1.7, top + 0.03, PAL.white);
@@ -1235,7 +1417,9 @@ const workshop: ModelFn = (g, c) => {
     block(g, 0.1, 0.12, 0.9, 0.6, 0, h, wall, roof, WIN.IND, 0.18, h);
     frontQuad(g, 0.2, 0.42, 0, F, 0.602, 0x5a5e62);
     frontQuad(g, 0.55, 0.77, 0, F, 0.602, 0x5a5e62);
-    g.noWin().color(shade(roof, 0.9)).box(0.15, F * 1.05, 0.6, 0.85, F * 1.1, 0.68);
+    g.noWin()
+      .color(shade(roof, 0.9))
+      .box(0.15, F * 1.05, 0.6, 0.85, F * 1.1, 0.68);
     truck(g, 0.31, 0.78, false, r.pick(PAL.cars));
     crates(g, c, 0.65, 0.72, 0.9, 0.92, 2);
   }
@@ -1254,7 +1438,8 @@ const techSmall: ModelFn = (g, c) => {
       [0.5, 0.26],
       [0.75, 0.26],
       [0.3, 0.68],
-    ]) acUnit(g, x, z, F * 0.9, 1);
+    ])
+      acUnit(g, x, z, F * 0.9, 1);
     block(g, 0.7, 0.55, 0.9, 0.85, 0, F, PAL.glassBlue, PAL.flatRoof, WIN.GLASS, 0.1);
     fence(g, 0.05, 0.05, 0.95, 0.95, 0.05, FENCE, false);
   } else {
@@ -1264,7 +1449,9 @@ const techSmall: ModelFn = (g, c) => {
     const top = floors * F;
     g.rect(0.45, 0.7, 0.55, 0.97, 0.012, PAL.sidewalk);
     block(g, 0.15, 0.15, 0.85, 0.7, 0, top, wall, 0xd8dcdf, WIN.GLASS, 0.12);
-    g.noWin().color(accent).box(0.13, 0, 0.6, 0.3, top + 0.02, 0.72, { top: shade(accent, 0.85) });
+    g.noWin()
+      .color(accent)
+      .box(0.13, 0, 0.6, 0.3, top + 0.02, 0.72, { top: shade(accent, 0.85) });
     g.rect(0.2, 0.2, 0.5, 0.45, top + 0.008, 0x2a3f6f);
     g.rect(0.55, 0.2, 0.8, 0.45, top + 0.008, ROOF_GREEN);
     lotTree(g, c, 0.85, 0.85, 0.8);
@@ -1311,7 +1498,9 @@ const techLab: ModelFn = (g, c) => {
   const wall = r.pick(PAL.techWalls);
   if (c.name === 'Electronics Plant') {
     block(g, 0.15, 0.2, 1.85, 1.15, 0, 2 * F, wall, 0xd8dcdf, WIN.IND, 0.18);
-    g.noWin().color(PAL.glassBlue).box(0.14, F * 1.2, 0.19, 1.86, F * 1.45, 1.16, { noTop: true });
+    g.noWin()
+      .color(PAL.glassBlue)
+      .box(0.14, F * 1.2, 0.19, 1.86, F * 1.45, 1.16, { noTop: true });
     block(g, 0.5, 1.15, 1.5, 1.5, 0, 3 * F, r.pick(GLASS_WALLS), PAL.flatRoof, WIN.GLASS, 0.12);
     roofUnits(g, c, 0.15, 0.2, 1.85, 1.15, 2 * F, 4);
     parking(g, c, 0.1, 1.62, 1.9, 1.95, 5);
@@ -1323,7 +1512,8 @@ const techLab: ModelFn = (g, c) => {
       [1.45, 0.35],
       [1.72, 0.35],
       [1.58, 0.66],
-    ]) tank(g, tx, tz, 0.11, 0.32, 0xf2f4f6);
+    ])
+      tank(g, tx, tz, 0.11, 0.32, 0xf2f4f6);
     g.color(PAL.steel).beam([1.2, 0.2, 0.5], [1.58, 0.2, 0.5], 0.02);
     block(g, 1.3, 0.95, 1.85, 1.5, 0, F * 1.2, PAL.glassGreen, 0xb8d8c8, WIN.GLASS, 0.1);
     g.rect(0.2, 1.2, 1.2, 1.9, 0.012, shade(PAL.grass, 1.1));
@@ -1333,7 +1523,9 @@ const techLab: ModelFn = (g, c) => {
   } else {
     block(g, 0.2, 0.25, 1.25, 0.95, 0, 2 * F, wall, 0xd8dcdf, WIN.GLASS, 0.13);
     block(g, 0.95, 0.85, 1.8, 1.55, 0, 3 * F, wall, 0xd8dcdf, WIN.OFFICE, 0.15);
-    g.noWin().color(PAL.steel).beam([0.5, 2 * F, 0.5], [0.5, 2 * F + 0.12, 0.5], 0.02);
+    g.noWin()
+      .color(PAL.steel)
+      .beam([0.5, 2 * F, 0.5], [0.5, 2 * F + 0.12, 0.5], 0.02);
     g.color(PAL.white).cylinder(0.5, 0.5, 0.1, 2 * F + 0.12, 2 * F + 0.14, 8, 0xe8ecef);
     g.rect(0.3, 1.1, 0.9, 1.9, 0.012, shade(PAL.grass, 1.12));
     g.rect(1.3, 1.55, 1.4, 1.97, 0.012, PAL.sidewalk);
@@ -1356,11 +1548,18 @@ const tanks: ModelFn = (g, c) => {
       [0.28, 0.56],
       [0.52, 0.56],
     ]) {
-      g.noWin().color(col).lathe(x, z, [
-        [0.11, 0],
-        [0.11, 0.52],
-        [0, 0.6],
-      ], 8);
+      g.noWin()
+        .color(col)
+        .lathe(
+          x,
+          z,
+          [
+            [0.11, 0],
+            [0.11, 0.52],
+            [0, 0.6],
+          ],
+          8,
+        );
     }
     g.color(shade(col, 0.85)).box(0.72, 0, 0.22, 0.88, 0.75, 0.42, { top: PAL.flatRoofDark });
     g.color(PAL.steel).beam([0.72, 0.7, 0.32], [0.4, 0.62, 0.43], 0.025);
@@ -1409,7 +1608,9 @@ const factory: ModelFn = (g, c) => {
     for (const sx of [0.4, 0.9, 1.4]) g.rect(sx, 0.3, sx + 0.25, 1.1, h + 0.006, 0x9cc4dc);
     roofUnits(g, c, 0.15, 0.15, 1.85, 1.25, h, 2);
     g.emitter(1.7, h + 0.05, 0.3, 'steam');
-    g.noWin().color(PAL.steel).cylinder(1.7, 0.3, 0.03, h, h + 0.08, 6);
+    g.noWin()
+      .color(PAL.steel)
+      .cylinder(1.7, 0.3, 0.03, h, h + 0.08, 6);
     block(g, 0.25, 1.25, 0.95, 1.6, 0, 2 * F, r.pick(PAL.officeWalls), PAL.flatRoof, WIN.OFFICE, 0.15);
     for (const dx of [1.2, 1.55]) frontQuad(g, dx - 0.12, dx + 0.12, 0, F * 0.9, 1.252, 0x4a4e52);
     truck(g, 1.2, 1.52, false, r.pick(PAL.cars));
@@ -1476,7 +1677,9 @@ const techCampus: ModelFn = (g, c) => {
     g.rect(0.06, 0.06, 2.94, 1.75, 0.01, 0xd8d2c4);
     const top = r.int(8, 10) * F;
     block(g, 1.0, 0.4, 2.0, 1.4, 0, top, a, GLASS_ROOF, WIN.GLASS, 0.12);
-    g.noWin().color(r.pick([PAL.orange, PAL.green, PAL.blue, 0xe86a92])).box(1.3, top, 1.38, 1.7, top + 0.12, 1.42);
+    g.noWin()
+      .color(r.pick([PAL.orange, PAL.green, PAL.blue, 0xe86a92]))
+      .box(1.3, top, 1.38, 1.7, top + 0.12, 1.42);
     block(g, 0.2, 0.3, 0.95, 1.6, 0, 3 * F, wall, 0xd8dcdf, WIN.OFFICE, 0.15);
     block(g, 2.05, 0.3, 2.8, 1.6, 0, 3 * F, wall, 0xd8dcdf, WIN.OFFICE, 0.15);
     g.rect(0.25, 0.35, 0.9, 1.55, 3 * F + 0.006, ROOF_GREEN);
@@ -1489,7 +1692,8 @@ const techCampus: ModelFn = (g, c) => {
       [2.0, 2.7],
       [0.3, 2.75],
       [0.35, 1.85],
-    ]) lotTree(g, c, tx, tz, 1.0 + r.next() * 0.3);
+    ])
+      lotTree(g, c, tx, tz, 1.0 + r.next() * 0.3);
   } else {
     block(g, 0.2, 0.2, 1.3, 0.9, 0, 3 * F, r.pick(GLASS_WALLS), PAL.flatRoof, WIN.GLASS, 0.12);
     block(g, 1.7, 0.2, 2.8, 1.0, 0, 4 * F, wall, 0xd8dcdf, WIN.OFFICE, 0.15);
@@ -1507,7 +1711,8 @@ const techCampus: ModelFn = (g, c) => {
       [1.55, 0.6],
       [2.6, 1.35],
       [0.4, 2.8],
-    ]) lotTree(g, c, tx, tz, 1.0 + r.next() * 0.3);
+    ])
+      lotTree(g, c, tx, tz, 1.0 + r.next() * 0.3);
     car(g, 1.75, 2.75, true, r.pick(PAL.cars));
   }
 };
@@ -1523,24 +1728,34 @@ const heavyPlant: ModelFn = (g, c) => {
     g.color(wall).win(WIN.IND, 0.2, h);
     g.box(0.15, 0, 0.15, 1.15, h, 1.85, { noTop: true });
     g.noWin().color(r.pick(PAL.industrialRoof)).shed(0.15, 0.15, 1.15, 1.85, h, 0.15, false);
-    g.color(rust).lathe(1.55, 0.55, [
-      [0.2, 0],
-      [0.22, 0.25],
-      [0.15, 0.7],
-      [0.1, 0.85],
-      [0.1, 1.0],
-    ], 8);
+    g.color(rust).lathe(
+      1.55,
+      0.55,
+      [
+        [0.2, 0],
+        [0.22, 0.25],
+        [0.15, 0.7],
+        [0.1, 0.85],
+        [0.1, 1.0],
+      ],
+      8,
+    );
     g.emitter(1.55, 1.05, 0.55, 'dark');
     for (const [sx, sz] of [
       [1.35, 1.25],
       [1.6, 1.25],
       [1.85, 1.25],
     ]) {
-      g.color(0x8a8078).lathe(sx, sz, [
-        [0.085, 0],
-        [0.085, 0.7],
-        [0, 0.78],
-      ], 8);
+      g.color(0x8a8078).lathe(
+        sx,
+        sz,
+        [
+          [0.085, 0],
+          [0.085, 0.7],
+          [0, 0.78],
+        ],
+        8,
+      );
     }
     g.color(PAL.steel).beam([1.55, 0.95, 0.55], [1.6, 0.7, 1.25], 0.03);
     g.beam([1.0, 0.05, 1.9], [1.45, 0.85, 0.65], 0.04);
@@ -1558,7 +1773,8 @@ const heavyPlant: ModelFn = (g, c) => {
         [0.1, -0.1],
         [-0.1, 0.1],
         [0.1, 0.1],
-      ]) g.box(sx + lx - 0.012, 0, sz + lz - 0.012, sx + lx + 0.012, 0.12, sz + lz + 0.012, { noTop: true });
+      ])
+        g.box(sx + lx - 0.012, 0, sz + lz - 0.012, sx + lx + 0.012, 0.12, sz + lz + 0.012, { noTop: true });
       g.color(white).sphere(sx, 0.27, sz, 0.17, 0);
     }
     g.color(0xd8dce0).cylinder(1.2, 0.45, 0.07, 0, 1.0, 6);
@@ -1588,7 +1804,8 @@ const refinery: ModelFn = (g, c) => {
     [1.2, 2.45],
     [0.5, 1.75],
     [1.2, 1.75],
-  ]) tank(g, tx, tz, 0.28, 0.22, tankCol, 0, 10);
+  ])
+    tank(g, tx, tz, 0.28, 0.22, tankCol, 0, 10);
   for (const [cx, cz, cr, ch] of [
     [2.0, 0.6, 0.1, 1.35],
     [2.35, 0.55, 0.08, 1.05],

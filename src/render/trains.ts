@@ -106,7 +106,17 @@ export class Trains {
     const dirs = [0, 1, 2, 3].filter((d) => mask & MASK_BITS[d]);
     if (!dirs.length) return;
     const d = dirs[Math.floor(Math.random() * dirs.length)];
-    this.trains.push({ tx, ty, din: d, dout: d, s: 0.5, speed: 1.3 + Math.random() * 0.5, trail: [], dist: 0, colour: [0xd6453d, 0x3f7fd6, 0xf2c94c, 0x4caf50][Math.floor(Math.random() * 4)] });
+    this.trains.push({
+      tx,
+      ty,
+      din: d,
+      dout: d,
+      s: 0.5,
+      speed: 1.3 + Math.random() * 0.5,
+      trail: [],
+      dist: 0,
+      colour: [0xd6453d, 0x3f7fd6, 0xf2c94c, 0x4caf50][Math.floor(Math.random() * 4)],
+    });
   }
 
   private headPos(t: Train): [number, number, number, number] {

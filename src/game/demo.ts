@@ -30,7 +30,8 @@ export function buildDemoCity(sim: Sim): { x: number; y: number } {
   const bx = best.x;
   const by = best.y;
   const road = (x0: number, y0: number, x1: number, y1: number) => applyPlan(planLine(sim, 'road', linePath(x0, y0, x1, y1)));
-  const zone = (x0: number, y0: number, x1: number, y1: number, z: ZoneKind, d: number) => applyPlan(planZone(sim, bx + x0, by + y0, bx + x1, by + y1, z, d));
+  const zone = (x0: number, y0: number, x1: number, y1: number, z: ZoneKind, d: number) =>
+    applyPlan(planZone(sim, bx + x0, by + y0, bx + x1, by + y1, z, d));
   for (const dy of [0, 8, 16, 23]) road(bx, by + dy, bx + W - 1, by + dy);
   for (const dx of [0, 10, 20, 29]) road(bx + dx, by, bx + dx, by + H - 1);
   // a road toward the nearest map edge for neighbour trade
@@ -47,8 +48,24 @@ export function buildDemoCity(sim: Sim): { x: number; y: number } {
   applyPlan(planPlace(sim, 'coal_plant', bx + 25, by + 24, 0));
   applyPlan(planPlace(sim, 'gas_plant', bx + 30, by + 18, 0));
   for (const [x, y] of [
-    [10, 4], [20, 4], [5, 8], [15, 8], [25, 8], [10, 12], [20, 12], [5, 16], [15, 16], [25, 16], [10, 19], [20, 19], [26, 23], [29, 19], [12, 16], [10, 21],
-  ]) applyPlan(planLine(sim, 'power', [[bx + x, by + y]]));
+    [10, 4],
+    [20, 4],
+    [5, 8],
+    [15, 8],
+    [25, 8],
+    [10, 12],
+    [20, 12],
+    [5, 16],
+    [15, 16],
+    [25, 16],
+    [10, 19],
+    [20, 19],
+    [26, 23],
+    [29, 19],
+    [12, 16],
+    [10, 21],
+  ])
+    applyPlan(planLine(sim, 'power', [[bx + x, by + y]]));
   applyPlan(planPlace(sim, 'police_station', bx + 11, by + 17, 'auto'));
   applyPlan(planPlace(sim, 'fire_station', bx + 13, by + 17, 'auto'));
   applyPlan(planPlace(sim, 'school', bx + 16, by + 17, 'auto'));

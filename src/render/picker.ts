@@ -15,8 +15,21 @@ const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 
 function rayTri(
-  ox: number, oy: number, oz: number, dx: number, dy: number, dz: number,
-  ax: number, ay: number, az: number, bx: number, by: number, bz: number, cx: number, cy: number, cz: number,
+  ox: number,
+  oy: number,
+  oz: number,
+  dx: number,
+  dy: number,
+  dz: number,
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number,
+  cx: number,
+  cy: number,
+  cz: number,
 ): number {
   const e1x = bx - ax;
   const e1y = by - ay;
@@ -93,8 +106,8 @@ export function pickTerrain(world: World, camera: THREE.Camera, sx: number, sy: 
   const stepZ = d.z > 0 ? 1 : -1;
   const tDeltaX = Math.abs(d.x) > 1e-12 ? Math.abs(1 / d.x) : Infinity;
   const tDeltaZ = Math.abs(d.z) > 1e-12 ? Math.abs(1 / d.z) : Infinity;
-  let tMaxX = Math.abs(d.x) > 1e-12 ? t0 + ((d.x > 0 ? tx + 1 - sxp : sxp - tx) * tDeltaX) : Infinity;
-  let tMaxZ = Math.abs(d.z) > 1e-12 ? t0 + ((d.z > 0 ? ty + 1 - szp : szp - ty) * tDeltaZ) : Infinity;
+  let tMaxX = Math.abs(d.x) > 1e-12 ? t0 + (d.x > 0 ? tx + 1 - sxp : sxp - tx) * tDeltaX : Infinity;
+  let tMaxZ = Math.abs(d.z) > 1e-12 ? t0 + (d.z > 0 ? ty + 1 - szp : szp - ty) * tDeltaZ : Infinity;
   for (let iter = 0; iter < (world.w + world.h) * 2 + 4; iter++) {
     const t = tileHit(world, tx, ty, o, d);
     if (t >= 0) {

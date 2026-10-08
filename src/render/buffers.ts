@@ -6,7 +6,10 @@ import { hexToRgb } from './geom';
 class Grow<T extends Float32Array | Int8Array | Uint8Array> {
   arr: T;
   len = 0;
-  constructor(private ctor: new (n: number) => T, cap: number) {
+  constructor(
+    private ctor: new (n: number) => T,
+    cap: number,
+  ) {
     this.arr = new ctor(cap);
   }
   reserve(n: number): void {

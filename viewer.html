@@ -6,16 +6,50 @@
     <title>Model Viewer</title>
     <link rel="icon" href="data:," />
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #9fc3d9; font-family: system-ui, sans-serif; }
-      canvas { display: block; }
-      #labels { position: fixed; inset: 0; pointer-events: none; }
-      .lbl { position: absolute; transform: translate(-50%, 0); font-size: 11px; color: #fff; background: rgba(0,0,0,.55); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
-      #info { position: fixed; left: 8px; top: 8px; color: #fff; background: rgba(0,0,0,.6); padding: 6px 10px; border-radius: 6px; font-size: 12px; }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #9fc3d9;
+        font-family: system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      #labels {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+      .lbl {
+        position: absolute;
+        transform: translate(-50%, 0);
+        font-size: 11px;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.55);
+        padding: 1px 5px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      #info {
+        position: fixed;
+        left: 8px;
+        top: 8px;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
     <div id="labels"></div>
-    <div id="info">Model viewer — ?filter=house,shop (exact model keys) &amp;q=tower (label search) &amp;variants=4 &amp;night=1 &amp;labels=0 &amp;focus=0&amp;zoom=4 · viewer.focus(i, zoom)</div>
+    <div id="info">
+      Model viewer — ?filter=house,shop (exact model keys) &amp;q=tower (label search) &amp;variants=4 &amp;night=1 &amp;labels=0
+      &amp;focus=0&amp;zoom=4 · viewer.focus(i, zoom)
+    </div>
     <script type="module" src="/src/dev/viewer.ts"></script>
   </body>
 </html>

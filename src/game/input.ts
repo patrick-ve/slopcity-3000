@@ -22,7 +22,10 @@ export class Input {
   private leftDown = false;
   private lastMove = { x: 0, y: 0 };
 
-  constructor(private game: Game, private canvas: HTMLCanvasElement) {
+  constructor(
+    private game: Game,
+    private canvas: HTMLCanvasElement,
+  ) {
     canvas.addEventListener('pointerdown', (e) => this.down(e));
     canvas.addEventListener('pointermove', (e) => this.move(e));
     canvas.addEventListener('pointerup', (e) => this.up(e));
@@ -117,7 +120,8 @@ export class Input {
     const g = this.game;
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
       e.preventDefault();
-      if (this.playing && g.sim && g.saveSlot(g.sim.city.name)) g.ui.toast({ title: 'City saved', text: `Saved as “${g.sim.city.name}”.`, kind: 'good' }, 2000);
+      if (this.playing && g.sim && g.saveSlot(g.sim.city.name))
+        g.ui.toast({ title: 'City saved', text: `Saved as “${g.sim.city.name}”.`, kind: 'good' }, 2000);
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;

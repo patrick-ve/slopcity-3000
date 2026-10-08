@@ -20,7 +20,11 @@ export class Minimap {
   private overlay = new Uint8Array(0);
   private dragging = false;
 
-  constructor(private getSim: () => Sim | null, private cam: CameraController, private size = 178) {
+  constructor(
+    private getSim: () => Sim | null,
+    private cam: CameraController,
+    private size = 178,
+  ) {
     this.canvas = h('canvas', { class: 'minimap', width: size, height: size }) as HTMLCanvasElement;
     this.ctx = this.canvas.getContext('2d')!;
     const go = (e: PointerEvent) => {

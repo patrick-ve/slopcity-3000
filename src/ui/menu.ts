@@ -16,8 +16,21 @@ export interface NewGameOptions {
 }
 
 const CITY_NAMES = [
-  'Llamaville', 'Polygon Park', 'New Slopsville', 'Triangle Falls', 'Vertex Bay', 'Low Poly Heights', 'Cheetah Springs',
-  'Port Facet', 'Mesh Harbor', 'Flatshade City', 'Normalton', 'Sim Valley', 'Gridford', 'Turtle Creek', 'Bevel Hills',
+  'Llamaville',
+  'Polygon Park',
+  'New Slopsville',
+  'Triangle Falls',
+  'Vertex Bay',
+  'Low Poly Heights',
+  'Cheetah Springs',
+  'Port Facet',
+  'Mesh Harbor',
+  'Flatshade City',
+  'Normalton',
+  'Sim Valley',
+  'Gridford',
+  'Turtle Creek',
+  'Bevel Hills',
 ];
 
 /** Title screen, new-city setup and load list. */
@@ -25,7 +38,10 @@ export class Menu {
   readonly el: HTMLDivElement;
   private opts: NewGameOptions;
 
-  constructor(private game: Game, container: HTMLElement) {
+  constructor(
+    private game: Game,
+    container: HTMLElement,
+  ) {
     this.el = h('div', { class: 'menu' });
     container.appendChild(this.el);
     this.opts = {
@@ -53,15 +69,24 @@ export class Menu {
     const buttons = h('div', { class: 'buttons' });
     if (auto) {
       buttons.appendChild(
-        h('button', {
-          class: 'btn primary',
-          onclick: () => this.game.loadSlot('autosave'),
-        }, `Continue ${auto.name} (${int(auto.population)} residents)`),
+        h(
+          'button',
+          {
+            class: 'btn primary',
+            onclick: () => this.game.loadSlot('autosave'),
+          },
+          `Continue ${auto.name} (${int(auto.population)} residents)`,
+        ),
       );
     }
-    buttons.appendChild(h('button', { class: `btn ${auto ? '' : 'primary'}`, html: `${icon('building', 18)}New city`, onclick: () => this.showNew() }));
-    if (saves.some((s) => s.slot !== 'autosave')) buttons.appendChild(h('button', { class: 'btn', html: `${icon('load', 18)}Load city`, onclick: () => this.showLoad() }));
-    buttons.appendChild(h('button', { class: 'btn', html: `${icon('help', 18)}How to play`, onclick: () => this.game.ui.openWindow('help') }));
+    buttons.appendChild(
+      h('button', { class: `btn ${auto ? '' : 'primary'}`, html: `${icon('building', 18)}New city`, onclick: () => this.showNew() }),
+    );
+    if (saves.some((s) => s.slot !== 'autosave'))
+      buttons.appendChild(h('button', { class: 'btn', html: `${icon('load', 18)}Load city`, onclick: () => this.showLoad() }));
+    buttons.appendChild(
+      h('button', { class: 'btn', html: `${icon('help', 18)}How to play`, onclick: () => this.game.ui.openWindow('help') }),
+    );
     const card = h(
       'div',
       { class: 'card glass' },
@@ -81,7 +106,12 @@ export class Menu {
         h(
           'div',
           { class: 'slot' },
-          h('div', { class: 'info' }, h('div', { class: 'nm' }, s.slot === 'autosave' ? `${s.name} (autosave)` : s.slot), h('div', { class: 'meta' }, `${int(s.population)} residents · ${s.date}`)),
+          h(
+            'div',
+            { class: 'info' },
+            h('div', { class: 'nm' }, s.slot === 'autosave' ? `${s.name} (autosave)` : s.slot),
+            h('div', { class: 'meta' }, `${int(s.population)} residents · ${s.date}`),
+          ),
           h('button', { class: 'btn small primary', onclick: () => this.game.loadSlot(s.slot) }, 'Load'),
         ),
       );
@@ -101,7 +131,13 @@ export class Menu {
         { class: 'newcity glass' },
         h('h2', {}, 'Load a city'),
         list,
-        h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: () => this.showMain() }, 'Back'), h('button', { class: 'btn', onclick: () => file.click() }, 'Import file…'), file),
+        h(
+          'div',
+          { class: 'actions' },
+          h('button', { class: 'btn', onclick: () => this.showMain() }, 'Back'),
+          h('button', { class: 'btn', onclick: () => file.click() }, 'Import file…'),
+          file,
+        ),
       ),
     );
   }
@@ -110,8 +146,18 @@ export class Menu {
     this.el.style.display = '';
     clear(this.el);
     const o = this.opts;
-    const name = h('input', { type: 'text', value: o.name, maxLength: 28, oninput: (e: Event) => (o.name = (e.target as HTMLInputElement).value) });
-    const mayor = h('input', { type: 'text', value: o.mayor, maxLength: 28, oninput: (e: Event) => (o.mayor = (e.target as HTMLInputElement).value) });
+    const name = h('input', {
+      type: 'text',
+      value: o.name,
+      maxLength: 28,
+      oninput: (e: Event) => (o.name = (e.target as HTMLInputElement).value),
+    });
+    const mayor = h('input', {
+      type: 'text',
+      value: o.mayor,
+      maxLength: 28,
+      oninput: (e: Event) => (o.mayor = (e.target as HTMLInputElement).value),
+    });
     const seed = h('input', {
       type: 'number',
       value: String(o.map.seed),
@@ -126,15 +172,19 @@ export class Menu {
         clear(box);
         for (const [v, label] of opts) {
           box.appendChild(
-            h('button', {
-              class: get() === v ? 'on' : '',
-              onclick: () => {
-                set(v);
-                draw();
-                this.game.sfx.play('click');
-                if (regen) this.preview();
+            h(
+              'button',
+              {
+                class: get() === v ? 'on' : '',
+                onclick: () => {
+                  set(v);
+                  draw();
+                  this.game.sfx.play('click');
+                  if (regen) this.preview();
+                },
               },
-            }, label),
+              label,
+            ),
           );
         }
       };
@@ -149,31 +199,92 @@ export class Menu {
       h('label', {}, 'Mayor'),
       mayor,
       h('label', {}, 'Map size'),
-      seg<number>([[64, 'Small'], [96, 'Medium'], [128, 'Large']], () => o.map.size, (v) => (o.map.size = v), true),
+      seg<number>(
+        [
+          [64, 'Small'],
+          [96, 'Medium'],
+          [128, 'Large'],
+        ],
+        () => o.map.size,
+        (v) => (o.map.size = v),
+        true,
+      ),
       h('label', {}, 'Terrain'),
-      seg<TerrainKind>([['flat', 'Flat'], ['rolling', 'Rolling'], ['hilly', 'Hilly'], ['mountains', 'Mountains']], () => o.map.terrain, (v) => (o.map.terrain = v), true),
+      seg<TerrainKind>(
+        [
+          ['flat', 'Flat'],
+          ['rolling', 'Rolling'],
+          ['hilly', 'Hilly'],
+          ['mountains', 'Mountains'],
+        ],
+        () => o.map.terrain,
+        (v) => (o.map.terrain = v),
+        true,
+      ),
       h('label', {}, 'Water'),
-      seg<WaterKind>([['none', 'None'], ['lakes', 'Lakes'], ['river', 'River'], ['coast', 'Coast'], ['island', 'Island']], () => o.map.water, (v) => (o.map.water = v), true),
+      seg<WaterKind>(
+        [
+          ['none', 'None'],
+          ['lakes', 'Lakes'],
+          ['river', 'River'],
+          ['coast', 'Coast'],
+          ['island', 'Island'],
+        ],
+        () => o.map.water,
+        (v) => (o.map.water = v),
+        true,
+      ),
       h('label', {}, 'Trees'),
-      seg<TreeKind>([['few', 'Few'], ['normal', 'Normal'], ['many', 'Many']], () => o.map.trees, (v) => (o.map.trees = v), true),
+      seg<TreeKind>(
+        [
+          ['few', 'Few'],
+          ['normal', 'Normal'],
+          ['many', 'Many'],
+        ],
+        () => o.map.trees,
+        (v) => (o.map.trees = v),
+        true,
+      ),
       h('label', {}, 'Start year'),
-      seg<number>([[1900, '1900'], [1950, '1950'], [2000, '2000']], () => o.startYear, (v) => (o.startYear = v), false),
+      seg<number>(
+        [
+          [1900, '1900'],
+          [1950, '1950'],
+          [2000, '2000'],
+        ],
+        () => o.startYear,
+        (v) => (o.startYear = v),
+        false,
+      ),
       h('label', {}, 'Difficulty'),
-      seg<Difficulty>([['easy', 'Easy §50k'], ['medium', 'Medium §20k'], ['hard', 'Hard §10k']], () => o.difficulty, (v) => (o.difficulty = v), false),
+      seg<Difficulty>(
+        [
+          ['easy', 'Easy §50k'],
+          ['medium', 'Medium §20k'],
+          ['hard', 'Hard §10k'],
+        ],
+        () => o.difficulty,
+        (v) => (o.difficulty = v),
+        false,
+      ),
       h('label', {}, 'Map seed'),
       h(
         'div',
         { class: 'row', style: 'padding:0' },
         seed,
-        h('button', {
-          class: 'btn',
-          title: 'Random map',
-          onclick: () => {
-            o.map.seed = randomSeed();
-            seed.value = String(o.map.seed);
-            this.preview();
+        h(
+          'button',
+          {
+            class: 'btn',
+            title: 'Random map',
+            onclick: () => {
+              o.map.seed = randomSeed();
+              seed.value = String(o.map.seed);
+              this.preview();
+            },
           },
-        }, '🎲'),
+          '🎲',
+        ),
       ),
     );
     this.el.appendChild(
@@ -186,20 +297,28 @@ export class Menu {
         h(
           'div',
           { class: 'actions' },
-          h('button', {
-            class: 'btn',
-            onclick: () => {
-              this.game.showDemo();
-              this.showMain();
+          h(
+            'button',
+            {
+              class: 'btn',
+              onclick: () => {
+                this.game.showDemo();
+                this.showMain();
+              },
             },
-          }, 'Back'),
-          h('button', {
-            class: 'btn primary',
-            onclick: () => {
-              o.name = o.name.trim() || 'SlopCity';
-              this.game.newCity({ ...o, map: { ...o.map } });
+            'Back',
+          ),
+          h(
+            'button',
+            {
+              class: 'btn primary',
+              onclick: () => {
+                o.name = o.name.trim() || 'SlopCity';
+                this.game.newCity({ ...o, map: { ...o.map } });
+              },
             },
-          }, 'Start building →'),
+            'Start building →',
+          ),
         ),
       ),
     );

@@ -343,28 +343,98 @@ export class GeometryBuilder {
    * Gable roof over [x0,x1]×[z0,z1] starting at height y with ridge height h.
    * axis = 'x': ridge runs along x. Overhang extends the eaves.
    */
-  gable(x0: number, z0: number, x1: number, z1: number, y: number, h: number, axis: 'x' | 'z' = 'x', overhang = 0.03, gableHex?: number): this {
+  gable(
+    x0: number,
+    z0: number,
+    x1: number,
+    z1: number,
+    y: number,
+    h: number,
+    axis: 'x' | 'z' = 'x',
+    overhang = 0.03,
+    gableHex?: number,
+  ): this {
     const o = overhang;
     const top = y + h;
     const gcol = gableHex;
     if (axis === 'x') {
       const zm = (z0 + z1) / 2;
       // slopes
-      this.face([[x0 - o, y, z1 + o], [x1 + o, y, z1 + o], [x1 + o, top, zm], [x0 - o, top, zm]], [0, 1, 1]);
-      this.face([[x1 + o, y, z0 - o], [x0 - o, y, z0 - o], [x0 - o, top, zm], [x1 + o, top, zm]], [0, 1, -1]);
+      this.face(
+        [
+          [x0 - o, y, z1 + o],
+          [x1 + o, y, z1 + o],
+          [x1 + o, top, zm],
+          [x0 - o, top, zm],
+        ],
+        [0, 1, 1],
+      );
+      this.face(
+        [
+          [x1 + o, y, z0 - o],
+          [x0 - o, y, z0 - o],
+          [x0 - o, top, zm],
+          [x1 + o, top, zm],
+        ],
+        [0, 1, -1],
+      );
       const saved = this.col;
       if (gcol !== undefined) this.col = hexToRgb(gcol);
-      this.face([[x1, y, z1], [x1, y, z0], [x1, top, zm]], [1, 0, 0]);
-      this.face([[x0, y, z0], [x0, y, z1], [x0, top, zm]], [-1, 0, 0]);
+      this.face(
+        [
+          [x1, y, z1],
+          [x1, y, z0],
+          [x1, top, zm],
+        ],
+        [1, 0, 0],
+      );
+      this.face(
+        [
+          [x0, y, z0],
+          [x0, y, z1],
+          [x0, top, zm],
+        ],
+        [-1, 0, 0],
+      );
       this.col = saved;
     } else {
       const xm = (x0 + x1) / 2;
-      this.face([[x1 + o, y, z0 - o], [x1 + o, y, z1 + o], [xm, top, z1 + o], [xm, top, z0 - o]], [1, 1, 0]);
-      this.face([[x0 - o, y, z1 + o], [x0 - o, y, z0 - o], [xm, top, z0 - o], [xm, top, z1 + o]], [-1, 1, 0]);
+      this.face(
+        [
+          [x1 + o, y, z0 - o],
+          [x1 + o, y, z1 + o],
+          [xm, top, z1 + o],
+          [xm, top, z0 - o],
+        ],
+        [1, 1, 0],
+      );
+      this.face(
+        [
+          [x0 - o, y, z1 + o],
+          [x0 - o, y, z0 - o],
+          [xm, top, z0 - o],
+          [xm, top, z1 + o],
+        ],
+        [-1, 1, 0],
+      );
       const saved = this.col;
       if (gcol !== undefined) this.col = hexToRgb(gcol);
-      this.face([[x0, y, z1], [x1, y, z1], [xm, top, z1]], [0, 0, 1]);
-      this.face([[x1, y, z0], [x0, y, z0], [xm, top, z0]], [0, 0, -1]);
+      this.face(
+        [
+          [x0, y, z1],
+          [x1, y, z1],
+          [xm, top, z1],
+        ],
+        [0, 0, 1],
+      );
+      this.face(
+        [
+          [x1, y, z0],
+          [x0, y, z0],
+          [xm, top, z0],
+        ],
+        [0, 0, -1],
+      );
       this.col = saved;
     }
     return this;
@@ -383,28 +453,116 @@ export class GeometryBuilder {
     if (Math.abs(w - d) < 1e-6) {
       const cx = (x0 + x1) / 2;
       const cz = (z0 + z1) / 2;
-      this.face([[x0, y, z1], [x1, y, z1], [cx, top, cz]], [0, 1, 1]);
-      this.face([[x1, y, z1], [x1, y, z0], [cx, top, cz]], [1, 1, 0]);
-      this.face([[x1, y, z0], [x0, y, z0], [cx, top, cz]], [0, 1, -1]);
-      this.face([[x0, y, z0], [x0, y, z1], [cx, top, cz]], [-1, 1, 0]);
+      this.face(
+        [
+          [x0, y, z1],
+          [x1, y, z1],
+          [cx, top, cz],
+        ],
+        [0, 1, 1],
+      );
+      this.face(
+        [
+          [x1, y, z1],
+          [x1, y, z0],
+          [cx, top, cz],
+        ],
+        [1, 1, 0],
+      );
+      this.face(
+        [
+          [x1, y, z0],
+          [x0, y, z0],
+          [cx, top, cz],
+        ],
+        [0, 1, -1],
+      );
+      this.face(
+        [
+          [x0, y, z0],
+          [x0, y, z1],
+          [cx, top, cz],
+        ],
+        [-1, 1, 0],
+      );
     } else if (w > d) {
       const zm = (z0 + z1) / 2;
       const inset = d / 2;
       const rx0 = x0 + inset;
       const rx1 = x1 - inset;
-      this.face([[x0, y, z1], [x1, y, z1], [rx1, top, zm], [rx0, top, zm]], [0, 1, 1]);
-      this.face([[x1, y, z0], [x0, y, z0], [rx0, top, zm], [rx1, top, zm]], [0, 1, -1]);
-      this.face([[x1, y, z1], [x1, y, z0], [rx1, top, zm]], [1, 1, 0]);
-      this.face([[x0, y, z0], [x0, y, z1], [rx0, top, zm]], [-1, 1, 0]);
+      this.face(
+        [
+          [x0, y, z1],
+          [x1, y, z1],
+          [rx1, top, zm],
+          [rx0, top, zm],
+        ],
+        [0, 1, 1],
+      );
+      this.face(
+        [
+          [x1, y, z0],
+          [x0, y, z0],
+          [rx0, top, zm],
+          [rx1, top, zm],
+        ],
+        [0, 1, -1],
+      );
+      this.face(
+        [
+          [x1, y, z1],
+          [x1, y, z0],
+          [rx1, top, zm],
+        ],
+        [1, 1, 0],
+      );
+      this.face(
+        [
+          [x0, y, z0],
+          [x0, y, z1],
+          [rx0, top, zm],
+        ],
+        [-1, 1, 0],
+      );
     } else {
       const xm = (x0 + x1) / 2;
       const inset = w / 2;
       const rz0 = z0 + inset;
       const rz1 = z1 - inset;
-      this.face([[x1, y, z0], [x1, y, z1], [xm, top, rz1], [xm, top, rz0]], [1, 1, 0]);
-      this.face([[x0, y, z1], [x0, y, z0], [xm, top, rz0], [xm, top, rz1]], [-1, 1, 0]);
-      this.face([[x0, y, z1], [x1, y, z1], [xm, top, rz1]], [0, 1, 1]);
-      this.face([[x1, y, z0], [x0, y, z0], [xm, top, rz0]], [0, 1, -1]);
+      this.face(
+        [
+          [x1, y, z0],
+          [x1, y, z1],
+          [xm, top, rz1],
+          [xm, top, rz0],
+        ],
+        [1, 1, 0],
+      );
+      this.face(
+        [
+          [x0, y, z1],
+          [x0, y, z0],
+          [xm, top, rz0],
+          [xm, top, rz1],
+        ],
+        [-1, 1, 0],
+      );
+      this.face(
+        [
+          [x0, y, z1],
+          [x1, y, z1],
+          [xm, top, rz1],
+        ],
+        [0, 1, 1],
+      );
+      this.face(
+        [
+          [x1, y, z0],
+          [x0, y, z0],
+          [xm, top, rz0],
+        ],
+        [0, 1, -1],
+      );
     }
     return this;
   }
@@ -413,12 +571,54 @@ export class GeometryBuilder {
   shed(x0: number, z0: number, x1: number, z1: number, y: number, h: number, towardFront = false): this {
     const yb = towardFront ? y : y + h;
     const yf = towardFront ? y + h : y;
-    this.face([[x0, yf, z1], [x1, yf, z1], [x1, yb, z0], [x0, yb, z0]], [0, 1, 0]);
+    this.face(
+      [
+        [x0, yf, z1],
+        [x1, yf, z1],
+        [x1, yb, z0],
+        [x0, yb, z0],
+      ],
+      [0, 1, 0],
+    );
     // side triangles + high wall
-    this.face([[x1, y, z1], [x1, y, z0], [x1, yb, z0], [x1, yf, z1]], [1, 0, 0]);
-    this.face([[x0, y, z0], [x0, y, z1], [x0, yf, z1], [x0, yb, z0]], [-1, 0, 0]);
-    if (towardFront) this.face([[x0, y, z1], [x1, y, z1], [x1, yf, z1], [x0, yf, z1]], [0, 0, 1]);
-    else this.face([[x1, y, z0], [x0, y, z0], [x0, yb, z0], [x1, yb, z0]], [0, 0, -1]);
+    this.face(
+      [
+        [x1, y, z1],
+        [x1, y, z0],
+        [x1, yb, z0],
+        [x1, yf, z1],
+      ],
+      [1, 0, 0],
+    );
+    this.face(
+      [
+        [x0, y, z0],
+        [x0, y, z1],
+        [x0, yf, z1],
+        [x0, yb, z0],
+      ],
+      [-1, 0, 0],
+    );
+    if (towardFront)
+      this.face(
+        [
+          [x0, y, z1],
+          [x1, y, z1],
+          [x1, yf, z1],
+          [x0, yf, z1],
+        ],
+        [0, 0, 1],
+      );
+    else
+      this.face(
+        [
+          [x1, y, z0],
+          [x0, y, z0],
+          [x0, yb, z0],
+          [x1, yb, z0],
+        ],
+        [0, 0, -1],
+      );
     return this;
   }
 
@@ -479,10 +679,17 @@ export class GeometryBuilder {
 
   /** Vertical cylinder (prism with `segs` sides). */
   cylinder(cx: number, cz: number, r: number, y0: number, y1: number, segs = 8, topHex?: number): this {
-    this.lathe(cx, cz, [
-      [r, y0],
-      [r, y1],
-    ], segs, 0, false);
+    this.lathe(
+      cx,
+      cz,
+      [
+        [r, y0],
+        [r, y1],
+      ],
+      segs,
+      0,
+      false,
+    );
     const saved = this.col;
     if (topHex !== undefined) this.col = hexToRgb(topHex);
     const pts: V3[] = [];
@@ -497,18 +704,29 @@ export class GeometryBuilder {
 
   /** Cone from radius r at y0 to a point at y1. */
   cone(cx: number, cz: number, r: number, y0: number, y1: number, segs = 6, phase = 0): this {
-    return this.lathe(cx, cz, [
-      [r, y0],
-      [0, y1],
-    ], segs, phase);
+    return this.lathe(
+      cx,
+      cz,
+      [
+        [r, y0],
+        [0, y1],
+      ],
+      segs,
+      phase,
+    );
   }
 
   /** Truncated cone (frustum) with a top cap. */
   frustum(cx: number, cz: number, r0: number, r1: number, y0: number, y1: number, segs = 8): this {
-    return this.lathe(cx, cz, [
-      [r0, y0],
-      [r1, y1],
-    ], segs);
+    return this.lathe(
+      cx,
+      cz,
+      [
+        [r0, y0],
+        [r1, y1],
+      ],
+      segs,
+    );
   }
 
   /** Horizontal cylinder along the x axis (pipes, tanks lying down). */
@@ -536,7 +754,9 @@ export class GeometryBuilder {
   cylinderZ(z0: number, z1: number, cx: number, cy: number, r: number, segs = 6): this {
     this.push();
     // rotate x->z around (cx, ., z0)
-    this.translate(cx, 0, z0).rotateY(-Math.PI / 2).translate(0, 0, 0);
+    this.translate(cx, 0, z0)
+      .rotateY(-Math.PI / 2)
+      .translate(0, 0, 0);
     this.cylinderX(0, z1 - z0, cy, 0, r, segs);
     this.pop();
     return this;
@@ -546,18 +766,43 @@ export class GeometryBuilder {
   sphere(cx: number, cy: number, cz: number, r: number, detail = 0, sy = 1): this {
     const t = (1 + Math.sqrt(5)) / 2;
     let verts: V3[] = [
-      [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
-      [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
-      [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+      [-1, t, 0],
+      [1, t, 0],
+      [-1, -t, 0],
+      [1, -t, 0],
+      [0, -1, t],
+      [0, 1, t],
+      [0, -1, -t],
+      [0, 1, -t],
+      [t, 0, -1],
+      [t, 0, 1],
+      [-t, 0, -1],
+      [-t, 0, 1],
     ].map((v) => {
       const l = Math.hypot(v[0], v[1], v[2]);
       return [v[0] / l, v[1] / l, v[2] / l] as V3;
     });
     let faces: [number, number, number][] = [
-      [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-      [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-      [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-      [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
+      [0, 11, 5],
+      [0, 5, 1],
+      [0, 1, 7],
+      [0, 7, 10],
+      [0, 10, 11],
+      [1, 5, 9],
+      [5, 11, 4],
+      [11, 10, 2],
+      [10, 7, 6],
+      [7, 1, 8],
+      [3, 9, 4],
+      [3, 4, 2],
+      [3, 2, 6],
+      [3, 6, 8],
+      [3, 8, 9],
+      [4, 9, 5],
+      [2, 4, 11],
+      [6, 2, 10],
+      [8, 6, 7],
+      [9, 8, 1],
     ];
     for (let d = 0; d < detail; d++) {
       const nf: [number, number, number][] = [];

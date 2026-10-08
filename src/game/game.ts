@@ -104,7 +104,15 @@ export class Game {
       ev.on('month', () => this.ui.onMonth()),
       ev.on('unlock', () => this.ui.onUnlock()),
       ev.on('building', (e) => {
-        if (e.type === 'destroyed') this.renderer.particles.burst(e.b.x + e.b.w / 2, sim.world.surfaceY(e.b.x + e.b.w / 2, e.b.y + e.b.h / 2) + 0.1, e.b.y + e.b.h / 2, 20, e.b.w, true);
+        if (e.type === 'destroyed')
+          this.renderer.particles.burst(
+            e.b.x + e.b.w / 2,
+            sim.world.surfaceY(e.b.x + e.b.w / 2, e.b.y + e.b.h / 2) + 0.1,
+            e.b.y + e.b.h / 2,
+            20,
+            e.b.w,
+            true,
+          );
       }),
     );
   }
@@ -194,7 +202,14 @@ export class Game {
     const w = sim.world;
     this.renderer.cam.lookAt(n ? sx / n : w.w / 2, n ? sy / n : w.h / 2, 18);
     this.renderer.cam.snap();
-    this.ui.toast({ title: `Welcome back to ${sim.city.name}`, text: `${sim.stats.residents.toLocaleString('en-US')} residents await your leadership.`, kind: 'good' }, 5000);
+    this.ui.toast(
+      {
+        title: `Welcome back to ${sim.city.name}`,
+        text: `${sim.stats.residents.toLocaleString('en-US')} residents await your leadership.`,
+        kind: 'good',
+      },
+      5000,
+    );
   }
 
   saveSlot(slot: string): boolean {
@@ -348,18 +363,25 @@ export class Game {
     line: (kind: LineKind, x0: number, y0: number, x1: number, y1: number) => {
       if (!this.sim) return 'no city';
       const plan = planLine(this.sim, kind, linePath(x0, y0, x1, y1));
-      return applyPlan(plan) ? 'ok' : plan.reason ?? 'failed';
+      return applyPlan(plan) ? 'ok' : (plan.reason ?? 'failed');
     },
     /** Place a building by catalog id. */
     place: (def: string, x: number, y: number) => {
       if (!this.sim) return 'no city';
       const plan = planPlace(this.sim, def, x, y, 'auto');
-      return applyPlan(plan) ? 'ok' : plan.reason ?? 'failed';
+      return applyPlan(plan) ? 'ok' : (plan.reason ?? 'failed');
     },
     /** Zone a rectangle. */
-    zone: (x0: number, y0: number, x1: number, y1: number, z: ZoneKind, d: number) => (this.sim ? applyPlan(planZone(this.sim, x0, y0, x1, y1, z, d)) : false),
+    zone: (x0: number, y0: number, x1: number, y1: number, z: ZoneKind, d: number) =>
+      this.sim ? applyPlan(planZone(this.sim, x0, y0, x1, y1, z, d)) : false,
     /** Start a new city without the menu. */
     quickStart: (seed = randomSeed(), terrain: MapOptions['terrain'] = 'rolling', water: MapOptions['water'] = 'river', size = 96) =>
-      this.newCity({ name: 'Devtown', mayor: 'Dev', startYear: 1950, difficulty: 'easy', map: { size, seed, terrain, water, trees: 'normal' } }),
+      this.newCity({
+        name: 'Devtown',
+        mayor: 'Dev',
+        startYear: 1950,
+        difficulty: 'easy',
+        map: { size, seed, terrain, water, trees: 'normal' },
+      }),
   };
 }

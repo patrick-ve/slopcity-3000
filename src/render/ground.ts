@@ -111,7 +111,17 @@ function terrainTile(world: World, buf: GroundBuf, x: number, y: number): void {
 }
 
 /** Flat rectangle draped on the terrain (or at a fixed height). */
-function drape(world: World, buf: GroundBuf, ax: number, az: number, bx: number, bz: number, off: number, hex: number, fixedY?: number): void {
+function drape(
+  world: World,
+  buf: GroundBuf,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  off: number,
+  hex: number,
+  fixedY?: number,
+): void {
   const y = (px: number, pz: number) => (fixedY !== undefined ? fixedY + off : world.surfaceY(px, pz) + off);
   buf.quad([ax, y(ax, az), az], [ax, y(ax, bz), bz], [bx, y(bx, bz), bz], [bx, y(bx, az), az], hex);
 }
@@ -134,7 +144,17 @@ function tileSurface(world: World, buf: GroundBuf, x: number, y: number, off: nu
 }
 
 /** Solid box (deck, pillar, railing) in world space. */
-export function groundBox(buf: GroundBuf, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, hex: number, top?: number): void {
+export function groundBox(
+  buf: GroundBuf,
+  x0: number,
+  y0: number,
+  z0: number,
+  x1: number,
+  y1: number,
+  z1: number,
+  hex: number,
+  top?: number,
+): void {
   const side = hex;
   const t = top ?? hex;
   buf.quad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], t);
@@ -201,7 +221,8 @@ function roadTile(world: World, buf: GroundBuf, x: number, y: number): void {
   if (straightNS || (count === 1 && (n || s))) {
     for (const z of [0.1, 0.6]) drape(world, buf, x + 0.5 - dash / 2, y + z, x + 0.5 + dash / 2, y + z + 0.3, markY, PAL.laneYellow, fixed);
   } else if (straightEW || (count === 1 && (e || wv))) {
-    for (const xx of [0.1, 0.6]) drape(world, buf, x + xx, y + 0.5 - dash / 2, x + xx + 0.3, y + 0.5 + dash / 2, markY, PAL.laneYellow, fixed);
+    for (const xx of [0.1, 0.6])
+      drape(world, buf, x + xx, y + 0.5 - dash / 2, x + xx + 0.3, y + 0.5 + dash / 2, markY, PAL.laneYellow, fixed);
   } else if (count >= 3) {
     // stop bars on the incoming lanes
     const bar = 0.035;
@@ -268,7 +289,17 @@ function railTile(world: World, buf: GroundBuf, x: number, y: number): void {
       const ex = dx === 0 ? sx : x + 0.5 + dx * 0.5;
       const ez = dz === 0 ? sz : y + 0.5 + dz * 0.5;
       const t = 0.012;
-      drape(world, buf, Math.min(sx, ex) - (dx === 0 ? t : 0), Math.min(sz, ez) - (dz === 0 ? t : 0), Math.max(sx, ex) + (dx === 0 ? t : 0), Math.max(sz, ez) + (dz === 0 ? t : 0), railY, PAL.steel, fixed);
+      drape(
+        world,
+        buf,
+        Math.min(sx, ex) - (dx === 0 ? t : 0),
+        Math.min(sz, ez) - (dz === 0 ? t : 0),
+        Math.max(sx, ex) + (dx === 0 ? t : 0),
+        Math.max(sz, ez) + (dz === 0 ? t : 0),
+        railY,
+        PAL.steel,
+        fixed,
+      );
     }
   }
 }

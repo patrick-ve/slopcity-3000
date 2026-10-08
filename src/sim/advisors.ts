@@ -39,20 +39,34 @@ export function getAdvice(sim: Sim): Advice[] {
   if (c.funds < 0) add('finance', 2, 'We are broke! Raise taxes, cut department funding or issue a bond right away.');
   else if (budget.total < 0 && c.funds < -budget.total * 12)
     add('finance', 2, `We lose §${Math.round(-budget.total).toLocaleString('en-US')} a month and will be broke within a year.`);
-  else if (budget.total < 0) add('finance', 1, `The budget runs a monthly deficit of §${Math.round(-budget.total).toLocaleString('en-US')}.`);
+  else if (budget.total < 0)
+    add('finance', 1, `The budget runs a monthly deficit of §${Math.round(-budget.total).toLocaleString('en-US')}.`);
   if (c.tax.R > 10 || c.tax.C > 10 || c.tax.I > 10) add('finance', 1, 'Taxes above 10% scare away residents and businesses.');
-  if (c.tax.R < 5 && c.tax.C < 5 && c.tax.I < 5 && c.funds < 5000) add('finance', 1, 'Our taxes are low. A small raise would help the treasury.');
+  if (c.tax.R < 5 && c.tax.C < 5 && c.tax.I < 5 && c.funds < 5000)
+    add('finance', 1, 'Our taxes are low. A small raise would help the treasury.');
   if (budget.total > 0 && c.funds > 20000) add('finance', 0, 'The treasury is healthy. A good time to invest in services.');
 
   // utilities
-  if (s.buildings > 0 && s.powerSupply === 0) add('utilities', 2, 'There is no power at all! Build a power plant and connect it with power lines.');
-  else if (s.powerDemand > s.powerSupply) add('utilities', 2, `Power demand (${Math.round(s.powerDemand)} MW) exceeds supply (${Math.round(s.powerSupply)} MW). Build another plant.`);
+  if (s.buildings > 0 && s.powerSupply === 0)
+    add('utilities', 2, 'There is no power at all! Build a power plant and connect it with power lines.');
+  else if (s.powerDemand > s.powerSupply)
+    add(
+      'utilities',
+      2,
+      `Power demand (${Math.round(s.powerDemand)} MW) exceeds supply (${Math.round(s.powerSupply)} MW). Build another plant.`,
+    );
   else if (s.powerDemand > s.powerSupply * 0.85) add('utilities', 1, 'Our power plants are near capacity. Plan a new plant soon.');
   if (s.unpoweredZones > 0 && s.powerSupply > 0)
-    add('utilities', 2, `${s.unpoweredZones} zoned tiles have no power and cannot grow. Zones carry power to each other, but you need power lines to cross roads and empty land.`);
+    add(
+      'utilities',
+      2,
+      `${s.unpoweredZones} zoned tiles have no power and cannot grow. Zones carry power to each other, but you need power lines to cross roads and empty land.`,
+    );
   else if (s.unpoweredZones > 0) add('utilities', 2, 'Zones need power before anything is built. Build a power plant next to your zones.');
-  if (s.unpowered > 3) add('utilities', 1, `${s.unpowered} buildings have no power. Check the power grid for gaps — power lines must cross roads.`);
-  if (s.residents > 400 && s.waterSupply === 0) add('utilities', 2, 'We have no water supply. Build water pumps and lay pipes in the underground view.');
+  if (s.unpowered > 3)
+    add('utilities', 1, `${s.unpowered} buildings have no power. Check the power grid for gaps — power lines must cross roads.`);
+  if (s.residents > 400 && s.waterSupply === 0)
+    add('utilities', 2, 'We have no water supply. Build water pumps and lay pipes in the underground view.');
   else if (s.waterDemand > s.waterSupply) add('utilities', 1, 'Water demand exceeds supply. Build more pumps or a water tower.');
   if (s.unwatered > 5) add('utilities', 1, `${s.unwatered} buildings have no water. Medium and dense zones need pipes to grow.`);
   if (c.garbageBacklog > 100) add('utilities', 2, 'Garbage is piling up! Zone a landfill near a road, build an incinerator or export it.');
@@ -63,11 +77,14 @@ export function getAdvice(sim: Sim): Advice[] {
   if (s.residents > 1500 && s.avgCrime > 0.3) add('safety', 2, 'Crime is high. Build police stations near dense neighbourhoods.');
   else if (s.residents > 800 && s.avgCrime > 0.15) add('safety', 1, 'Crime is rising. A police station would help.');
   if (s.burning > 0) add('safety', 2, `${s.burning} buildings are on fire! Fire stations nearby put fires out faster.`);
-  if (s.residents > 1000 && !hasBuilding(sim, 'fire_station')) add('safety', 1, 'We have no fire station. One fire could spread through the whole city.');
+  if (s.residents > 1000 && !hasBuilding(sim, 'fire_station'))
+    add('safety', 1, 'We have no fire station. One fire could spread through the whole city.');
 
   // health & education
-  if (s.residents > 2000 && s.eduCover < 0.3) add('health', 1, 'Too few children can reach a school. Build elementary schools in residential areas.');
-  if (s.residents > 8000 && !hasBuilding(sim, 'college')) add('health', 1, 'A college would raise education and attract high-tech industry.');
+  if (s.residents > 2000 && s.eduCover < 0.3)
+    add('health', 1, 'Too few children can reach a school. Build elementary schools in residential areas.');
+  if (s.residents > 8000 && !hasBuilding(sim, 'college'))
+    add('health', 1, 'A college would raise education and attract high-tech industry.');
   if (s.residents > 2000 && s.healthCover < 0.3) add('health', 1, 'Health care is poor. Build clinics or a hospital.');
   if (c.le < 55 && s.residents > 1000) add('health', 2, `Life expectancy has dropped to ${Math.round(c.le)} years.`);
   if (c.eq > 110) add('health', 0, `Our citizens are well educated (EQ ${Math.round(c.eq)}). High-tech industry will move in.`);
@@ -75,7 +92,8 @@ export function getAdvice(sim: Sim): Advice[] {
   // transport
   if (s.avgTraffic > 0.9) add('transport', 2, 'Traffic is gridlocked. Add more roads, bus stops or rail lines.');
   else if (s.avgTraffic > 0.55) add('transport', 1, 'Traffic is getting heavy. Consider mass transit.');
-  if (s.connections.road === 0 && s.residents > 300) add('transport', 1, 'Connect a road to the map edge to link us to our neighbours. It boosts demand.');
+  if (s.connections.road === 0 && s.residents > 300)
+    add('transport', 1, 'Connect a road to the map edge to link us to our neighbours. It boosts demand.');
   if (s.indJobs > 3000 && !s.hasSeaport) add('transport', 1, 'Industry wants a seaport to reach world markets.');
   if (s.comJobs > 4000 && !s.hasAirport) add('transport', 1, 'Businesses want an airport.');
 
@@ -93,7 +111,8 @@ export function getAdvice(sim: Sim): Advice[] {
   if (d.i > 0.4 && s.emptyZoneTiles[3] < 10) add('planning', 1, 'Industry wants to expand. Zone more industrial land.');
   if (d.r < -0.3) add('planning', 1, 'Residential demand is negative: we need more jobs or a better quality of life.');
   if (s.abandoned > 10) add('planning', 1, `${s.abandoned} buildings are abandoned. Check power, water, pollution and crime nearby.`);
-  if (s.unemployment > 0.15 && s.residents > 1000) add('planning', 1, `Unemployment is ${(s.unemployment * 100).toFixed(0)}%. Zone more commercial and industrial land.`);
+  if (s.unemployment > 0.15 && s.residents > 1000)
+    add('planning', 1, `Unemployment is ${(s.unemployment * 100).toFixed(0)}%. Zone more commercial and industrial land.`);
 
   for (const a of ADVISORS) if (!out.some((o) => o.advisor === a.id)) add(a.id, 0, quiet(a.id));
   return out.sort((a, b) => b.severity - a.severity);
