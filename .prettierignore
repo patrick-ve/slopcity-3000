@@ -1,0 +1,7 @@
+dist
+coverage
+.playwright-mcp
+playwright-report
+test-results
+package-lock.json
+tests/fixtures

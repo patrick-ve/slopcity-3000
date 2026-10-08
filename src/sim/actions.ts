@@ -174,7 +174,7 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
     const i = w.idx(x, y);
     const water = w.isWater(x, y);
     let ok = true;
-    let tileCost = 0;
+    let tileCost: number;
     const has = (w.net[i] & flag) !== 0;
     const b = w.buildingAt(x, y);
     if (kind === 'pipe') {

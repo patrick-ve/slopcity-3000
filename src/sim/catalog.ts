@@ -162,6 +162,7 @@ export const GROWABLES: BuildingDef[] = GROWABLE_ROWS.map(([z, d, w, s, cap, mod
 
 // --------------------------------------------------------------- ploppables
 
+// prettier-ignore
 export const PLOPPABLES: BuildingDef[] = [
   // ---- transport
   {

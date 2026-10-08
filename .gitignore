@@ -5,3 +5,5 @@ dist
 .vite
 coverage
 .playwright-mcp
+playwright-report
+test-results
