@@ -3,7 +3,7 @@ import type { ModelFn } from '../types';
 import { FLOOR, shade, type V3, WIN } from '../../geom';
 import { airplane, ASPHALT, bench, bush, car, deck, fence, type G, GLASS_TINT, lamp, type P2, PATH, prism, tree, WHITE } from './shared';
 import { PAL } from '../../palette';
-import { HIGHWAY_CLEAR } from '../../ground';
+import { HIGHWAY_CLEAR } from '../../tracks/highways';
 
 // --------------------------------------------------------------- transport
 

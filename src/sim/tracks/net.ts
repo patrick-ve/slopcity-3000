@@ -444,13 +444,26 @@ export class TrackNet {
   }
 
   /**
-   * Outline of a junction (two or more arms) at a lateral offset from the
-   * centre lines: across each arm's cut, then a curb curve to the next arm.
+   * Curb between arm i and the next arm (by angle) of a junction, at a
+   * lateral offset: `segments + 1` points from arm i's left corner to the
+   * next arm's right corner (repeated points where the two corners meet).
    */
-  outline(n: number, offset: number, curb = 6): number[] {
+  curb(n: number, i: number, offset: number, segments = 6): number[] {
     const arms = this.arms(n);
-    const k = arms.length;
-    const fr = arms.map((a) => this.armFrame(a));
+    const f = this.armFrame(arms[i]);
+    const g = this.armFrame(arms[(i + 1) % arms.length]);
+    const [lx, ly] = [f.x - f.ty * offset, f.y + f.tx * offset];
+    const [rx, ry] = [g.x + g.ty * offset, g.y - g.tx * offset];
+    const c = curbControl(lx, ly, f.tx, f.ty, rx, ry, g.tx, g.ty) ?? [(lx + rx) / 2, (ly + ry) / 2];
+    return bezierPoints(lx, ly, c[0], c[1], rx, ry, segments);
+  }
+
+  /**
+   * Outline of a junction (two or more arms) at a lateral offset from the
+   * centre lines: across each arm's cut, then along the curb to the next arm.
+   */
+  outline(n: number, offset: number, segments = 6): number[] {
+    const k = this.degree(n);
     const out: number[] = [];
     const push = (x: number, y: number) => {
       const m = out.length;
@@ -458,18 +471,8 @@ export class TrackNet {
       out.push(x, y);
     };
     for (let i = 0; i < k; i++) {
-      const f = fr[i];
-      const g = fr[(i + 1) % k];
-      const [rx, ry] = [f.x + f.ty * offset, f.y - f.tx * offset];
-      const [lx, ly] = [f.x - f.ty * offset, f.y + f.tx * offset];
-      const [nrx, nry] = [g.x + g.ty * offset, g.y - g.tx * offset];
-      push(rx, ry);
-      push(lx, ly);
-      const c = curbControl(lx, ly, f.tx, f.ty, nrx, nry, g.tx, g.ty);
-      if (c) {
-        const pts = bezierPoints(lx, ly, c[0], c[1], nrx, nry, curb);
-        for (let j = 2; j < pts.length - 2; j += 2) push(pts[j], pts[j + 1]);
-      }
+      const pts = this.curb(n, i, offset, segments);
+      for (let j = 0; j < pts.length; j += 2) push(pts[j], pts[j + 1]);
     }
     if (out.length >= 4 && Math.abs(out[0] - out[out.length - 2]) < 1e-9 && Math.abs(out[1] - out[out.length - 1]) < 1e-9) out.length -= 2;
     return out;

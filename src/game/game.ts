@@ -20,6 +20,8 @@ import type { ZoneKind } from '../sim/types';
 import { UndoStack } from '../sim/undo';
 import { buildStarter, getStarter } from '../sim/starters';
 import { buildScenario, getScenario, updateScenario } from '../sim/scenarios';
+import { planTrack } from '../sim/tracks/plan';
+import type { TrackKind } from '../sim/tracks/net';
 
 export type Mode = 'menu' | 'play';
 
@@ -505,6 +507,12 @@ export class Game {
     line: (kind: LineKind, x0: number, y0: number, x1: number, y1: number) => {
       if (!this.sim) return 'no city';
       const plan = planLine(this.sim, kind, linePath(x0, y0, x1, y1));
+      return applyPlan(plan) ? 'ok' : (plan.reason ?? 'failed');
+    },
+    /** Build road, rail or highway at any angle: a curve through (cx, cy) when given, else straight. */
+    track: (kind: TrackKind, ax: number, ay: number, bx: number, by: number, cx?: number, cy?: number) => {
+      if (!this.sim) return 'no city';
+      const plan = planTrack(this.sim, kind, { type: 'free', ax, ay, bx, by, c: cx === undefined || cy === undefined ? null : [cx, cy] });
       return applyPlan(plan) ? 'ok' : (plan.reason ?? 'failed');
     },
     /** Place a building by catalog id. */
