@@ -234,6 +234,10 @@ export class Input {
         e.preventDefault();
         g.tools.rotate();
         break;
+      case 'KeyC':
+        // grid, straight or curved roads, rails and highways
+        if (g.tools.trackKind) g.tools.cycleShape();
+        break;
       case 'KeyM':
         g.toggleMute();
         break;

@@ -65,7 +65,7 @@ export class TouchGestures {
       }
       return;
     }
-    if (this.mode === 'tool') g.tools.abort();
+    if (this.mode === 'tool') g.tools.interrupt();
     this.mode = 'multi';
     this.last = this.shape();
   }

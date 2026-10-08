@@ -41,6 +41,10 @@ const P: Record<string, string> = {
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
   city: '<path d="M3 21h18"/><path d="M5 21V10l4-2v13"/><path d="M9 21V5l6-2v18"/><path d="M15 21V11l4 2v8"/>',
+  shapeGrid: '<path d="M5 19V10h9V5"/><circle cx="5" cy="19" r="1.8"/><circle cx="14" cy="5" r="1.8"/>',
+  shapeStraight: '<path d="M5.5 18.5 18.5 5.5"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/>',
+  shapeCurve:
+    '<path d="M5 19C5 10 10 5 19 5"/><path d="M5 19 5 5h14" stroke-dasharray="1.5 2.5" opacity=".55"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/>',
   highway: '<path d="M2 9h20"/><path d="M2 13h20"/><path d="M5 13v8M19 13v8"/><path d="M6 11h3M11 11h2M15 11h3"/>',
   subway:
     '<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/><path d="m8 21 2-4M16 21l-2-4"/>',

@@ -7,7 +7,7 @@ import { getAdvice } from '../sim/advisors';
 import { OVERLAYS, type OverlayId } from '../render/overlays';
 import type { SimMessage } from '../sim/sim';
 import type { Game } from '../game/game';
-import { CATEGORIES, QUERY_TOOL, type ToolCategory, type ToolSpec } from '../game/tools';
+import { CATEGORIES, QUERY_TOOL, TRACK_SHAPES, type ToolCategory, type ToolSpec, type TrackShapeMode } from '../game/tools';
 import { icon } from './icons';
 import { Minimap } from './minimap';
 import {
@@ -42,6 +42,8 @@ export class UI {
   private flyoutCat: string | null = null;
   private catButtons = new Map<string, HTMLButtonElement>();
   private undoBtn!: HTMLButtonElement;
+  private shapeBar!: HTMLDivElement;
+  private shapeBtns = new Map<TrackShapeMode, HTMLButtonElement>();
   private scenarioBtn!: HTMLButtonElement;
   private statFunds!: HTMLDivElement;
   private statFundsDelta!: HTMLSpanElement;
@@ -83,6 +85,7 @@ export class UI {
     container.appendChild(this.root);
     this.buildTopbar();
     this.buildToolbar();
+    this.buildShapeBar();
     this.buildBottombar();
     this.buildSidepanel();
     this.tooltipEl = h('div', { class: 'tooltip', style: 'display:none' });
@@ -337,6 +340,41 @@ export class UI {
       const cat = CATEGORIES.find((c) => c.id === id)!;
       b.classList.toggle('on', cat.tools.some((t) => t.key === key) || this.flyoutCat === id);
     }
+    this.syncShape();
+  }
+
+  // ------------------------------------------------------------- shape bar
+
+  /** Grid / Straight / Curve choice for roads, rails and highways. */
+  private buildShapeBar(): void {
+    this.shapeBar = h('div', { class: 'shapebar glass', style: 'display:none' }, h('span', { class: 'lbl' }, 'Shape'));
+    for (const sh of TRACK_SHAPES) {
+      const b = h(
+        'button',
+        {
+          class: 'shapebtn',
+          title: `${sh.name}: ${sh.sub} (C cycles)`,
+          onclick: () => {
+            this.game.sfx.play('click');
+            this.game.tools.setShape(sh.id);
+          },
+        },
+        h('span', { html: icon(sh.icon, 18) }),
+        h('span', {}, sh.name),
+      ) as HTMLButtonElement;
+      this.shapeBtns.set(sh.id, b);
+      this.shapeBar.appendChild(b);
+    }
+    this.shapeBar.appendChild(h('kbd', { class: 'kbd' }, 'C'));
+    this.root.appendChild(this.shapeBar);
+  }
+
+  /** Show the shape bar while a road, rail or highway tool is active. */
+  syncShape(): void {
+    if (!this.shapeBar) return;
+    const tools = this.game.tools;
+    this.shapeBar.style.display = tools.trackKind ? '' : 'none';
+    for (const [id, b] of this.shapeBtns) b.classList.toggle('on', tools.shape === id);
   }
 
   // ------------------------------------------------------------ bottom bar

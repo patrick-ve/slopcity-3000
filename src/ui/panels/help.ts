@@ -32,6 +32,17 @@ export class HelpPanel implements Panel {
       b.appendChild(h('div', { class: 'section-title' }, title));
       b.appendChild(h('div', { class: 'help-grid' }, ...rows.flatMap(([k, v]) => [h('span', { class: 'kbd' }, k), h('span', {}, v)])));
     };
+    grid('Roads, rails and highways', [
+      ['Grid', 'Drag along the tiles, like classic SimCity. Shift bends the path the other way.'],
+      ['Straight', 'Drag a straight line at any angle. It snaps to 45° steps; hold Shift for 15° steps.'],
+      [
+        'Curve',
+        'Click the start, the point where it bends, and the end. Out of a dead end the curve continues the road; Shift frees the bend.',
+      ],
+      ['C', 'Switch between Grid, Straight and Curve (or use the bar at the bottom)'],
+      ['Ends', 'Starts and ends snap to track nearby and join it. Crossing track makes a junction.'],
+      ['Esc / right click', 'Drop a curve you have started'],
+    ]);
     grid('Mouse', [
       ['Left drag', 'Use the current tool (zones, roads, bulldoze …)'],
       ['Right drag', 'Pan the view'],
@@ -55,7 +66,8 @@ export class HelpPanel implements Panel {
       ['W A S D / arrows', 'Pan'],
       ['Q / E', 'Rotate the view 90°'],
       ['+ / −', 'Zoom in and out'],
-      ['Shift (while dragging)', 'Bend lines the other way'],
+      ['Shift (while dragging)', 'Bend lines the other way; snap free track to 15° steps'],
+      ['C', 'Grid, straight or curved roads, rails and highways'],
       ['X / Tab', 'Rotate the building you are placing'],
       ['Space', 'Pause / resume'],
       ['1 2 3', 'Turtle, Llama, Cheetah speed'],

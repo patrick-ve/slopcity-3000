@@ -58,6 +58,35 @@ test('found a city, build a road and undo it', async ({ page }) => {
   await expect(page.locator('.toast').filter({ hasText: 'Undone: Road' })).toBeVisible();
 });
 
+test('draw a curved road with three clicks', async ({ page }) => {
+  await page.getByRole('button', { name: /New city/ }).click();
+  await page.getByRole('button', { name: 'Flat' }).click();
+  await page.getByRole('button', { name: 'None', exact: true }).click();
+  await page.getByRole('button', { name: /Start building/ }).click();
+  await expect(page.locator('.topbar')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { slop: Slop }).slop.setSpeed(0));
+  await page.keyboard.press('KeyR');
+  await page.getByRole('button', { name: 'Curve' }).click();
+  // the start, the point where it bends, the end
+  for (const [x, y] of [
+    [520, 470],
+    [640, 330],
+    [790, 450],
+  ])
+    await page.mouse.click(x, y);
+  const curves = () =>
+    page.evaluate(() => {
+      const edges = (window as unknown as { slop: { sim: { world: { tracks: { road: { edges: Map<number, { curved: boolean }> } } } } } })
+        .slop.sim.world.tracks.road.edges;
+      return [...edges.values()].filter((e) => e.curved).length;
+    });
+  await expect.poll(curves).toBe(1);
+  expect(await roadTiles(page)).toBeGreaterThan(8);
+  await page.keyboard.press('Control+KeyZ');
+  await expect.poll(curves).toBe(0);
+  await expect.poll(() => roadTiles(page)).toBe(0);
+});
+
 test('take over a starter city', async ({ page }) => {
   await page.getByRole('button', { name: /Starter cities/ }).click();
   const riverside = page.locator('.slot').filter({ hasText: 'Riverside' });

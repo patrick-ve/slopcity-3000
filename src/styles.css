@@ -399,6 +399,61 @@ button {
   color: var(--muted);
 }
 
+/* ------------------------------------------------------------ shape bar */
+
+.shapebar {
+  position: absolute;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px 5px 12px;
+  white-space: nowrap;
+}
+
+.shapebar .lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.shapebtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 11px 0 8px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.shapebtn:hover {
+  background: var(--panel-3);
+}
+
+.shapebtn.on {
+  background: rgba(245, 185, 66, 0.16);
+  border-color: rgba(245, 185, 66, 0.55);
+  color: var(--accent-2);
+}
+
+.shapebar .kbd {
+  margin-left: 4px;
+}
+
 /* ------------------------------------------------------------ bottom bar */
 
 .bottombar {

@@ -4,11 +4,22 @@ import type { ModelMesh } from './geom';
 import { modelToGeometry } from './meshUtil';
 import { createBuildingMaterial } from './materials';
 import { rotPlacement } from './buffers';
+import { curvePoint, curveTangent, roughLength, type Curve } from '../sim/tracks/geom';
 
 export interface PreviewTile {
   x: number;
   y: number;
   color: number;
+}
+
+/** A translucent band along track curves (planned roads, rails and highways, guide lines). */
+export interface PreviewRibbon {
+  curves: Curve[];
+  /** Half width. */
+  hw: number;
+  color: number;
+  /** Float at highway deck height instead of on the ground. */
+  elevated?: boolean;
 }
 
 const OFFSET = 0.055;
@@ -17,6 +28,7 @@ const OFFSET = 0.055;
 export class Preview {
   readonly group = new THREE.Group();
   private tiles: THREE.Mesh;
+  private ribbons: THREE.Mesh;
   private ghost: THREE.Mesh;
   private ghostMat: THREE.MeshLambertMaterial;
   private ghostKey = '';
@@ -34,11 +46,17 @@ export class Preview {
     this.tiles = new THREE.Mesh(new THREE.BufferGeometry(), mat);
     this.tiles.renderOrder = 5;
     this.tiles.frustumCulled = false;
+    this.ribbons = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    this.ribbons.renderOrder = 6;
+    this.ribbons.frustumCulled = false;
     this.ghostMat = createBuildingMaterial({ transparent: true, opacity: 0.7 });
     this.ghost = new THREE.Mesh(new THREE.BufferGeometry(), this.ghostMat);
     this.ghost.visible = false;
     this.ghost.renderOrder = 6;
-    this.group.add(this.tiles, this.ghost);
+    this.group.add(this.tiles, this.ribbons, this.ghost);
   }
 
   setWorld(world: World): void {
@@ -87,6 +105,47 @@ export class Preview {
     this.tiles.geometry = g;
   }
 
+  showRibbons(list: PreviewRibbon[]): void {
+    const w = this.world;
+    const pos: number[] = [];
+    const col: number[] = [];
+    const c = new THREE.Color();
+    const height = (x: number, z: number, elevated: boolean) => {
+      const tx = Math.min(w.w - 1, Math.max(0, Math.floor(x)));
+      const tz = Math.min(w.h - 1, Math.max(0, Math.floor(z)));
+      if (elevated) return Math.max(w.tileMax(tx, tz), w.seaLevel) * LEVEL_H + 0.76;
+      return Math.max(w.surfaceY(Math.min(w.w, Math.max(0, x)), Math.min(w.h, Math.max(0, z))), w.seaLevel * LEVEL_H + 0.03) + 0.07;
+    };
+    for (const r of list) {
+      c.setHex(r.color);
+      for (const q of r.curves) {
+        const n = Math.max(2, Math.ceil(roughLength(q) / 0.2) + 1);
+        let prev: number[] | null = null;
+        for (let i = 0; i < n; i++) {
+          const t = i / (n - 1);
+          const [x, z] = curvePoint(q, t);
+          const [tx, tz] = curveTangent(q, t);
+          const lx = x - tz * r.hw;
+          const lz = z + tx * r.hw;
+          const rx = x + tz * r.hw;
+          const rz = z - tx * r.hw;
+          const cur = [lx, height(lx, lz, !!r.elevated), lz, rx, height(rx, rz, !!r.elevated), rz];
+          if (prev) {
+            pos.push(...prev.slice(0, 3), ...prev.slice(3), ...cur.slice(3));
+            pos.push(...prev.slice(0, 3), ...cur.slice(3), ...cur.slice(0, 3));
+            for (let k = 0; k < 6; k++) col.push(c.r, c.g, c.b);
+          }
+          prev = cur;
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    this.ribbons.geometry.dispose();
+    this.ribbons.geometry = g;
+  }
+
   /** Show a ghost model with its (unrotated) footprint dims dw×dh at tile (x,y). */
   showGhost(mesh: ModelMesh | null, key: string, x: number, y: number, rot: number, dw: number, dh: number, ok: boolean): void {
     if (!mesh) {
@@ -114,6 +173,7 @@ export class Preview {
 
   clear(): void {
     this.showTiles([]);
+    this.showRibbons([]);
     this.ghost.visible = false;
   }
 }
