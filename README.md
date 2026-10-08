@@ -90,6 +90,10 @@ Start a **new city**, take over one of the **starter cities**, or try a **scenar
 - **Interface**: tool fly-outs with costs, data maps (13 overlays), minimap, graphs, advisors,
   query tool, news ticker, budget window, save/load (browser storage, file export/import),
   autosave, options.
+- **Sound**: synthesised sound effects and an endless procedural jazz soundtrack (swing, ballad, bossa
+  nova and smooth jazz on electric piano, upright bass, vibraphone or muted trumpet, and brushes). Every
+  song is composed while you play; there are no audio files. Turn the music on or off and set its volume
+  in Options.
 - **Rendering**: around 70 procedural low-poly building models, flat shading, soft shadows,
   procedural window grids that light up at night, a day/night cycle, animated water with
   shore foam, traffic, trains, smoke, fire, spinning wind turbines and status icons.
@@ -107,8 +111,8 @@ src/
               previews, overlays, procedural models (render/models/civic/*, growables/*)
   ui/         DOM interface: toolbar, HUD, menu, minimap, icons, one file per window (ui/panels/*)
   game/       glue: Game (main loop, modes, settings), tools, mouse/keyboard input, touch gestures
-  audio/      WebAudio sound effects (synthesised, no assets)
-tests/        vitest tests for the simulation (balance, transport, undo, saves, scenarios …)
+  audio/      WebAudio sound effects and the procedural jazz soundtrack (synthesised, no assets)
+tests/        vitest tests for the simulation (balance, transport, undo, saves, scenarios …) and music
 e2e/          Playwright browser smoke tests
 viewer.html   development model viewer (/viewer.html?filter=coal_plant&variants=4)
 ```
