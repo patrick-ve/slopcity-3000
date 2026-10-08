@@ -222,7 +222,8 @@ function upgrade(sim: Sim, b: Building): void {
   const density = w.density[i];
   if (w.zone[i] !== zone || !density) return;
   const outdated = def.density !== density;
-  const full = b.pop >= (def.cap ?? 0) * 0.85;
+  // settled buildings sit near 70% occupancy; above 62% they count as full enough to grow
+  const full = b.pop >= (def.cap ?? 0) * 0.62;
   if (!outdated && !full) return;
   const dem = zoneDemand(sim, zone);
   const D = desirability(sim, zone, i);
@@ -329,7 +330,8 @@ export function occupancyMonth(sim: Sim): void {
     const i = w.idx(b.x, b.y);
     const dem = zoneDemand(sim, zone);
     const D = desirability(sim, zone, i);
-    let f = 0.55 + dem * 0.45 + D * 0.45;
+    // a little month-to-month movement keeps a built-out city alive
+    let f = 0.55 + dem * 0.45 + D * 0.45 + (sim.rng.next() - 0.5) * 0.05;
     if (!b.powered) f *= 0.15;
     if (needsWater(def) && !b.watered) f *= 0.55;
     let rd = 255;
