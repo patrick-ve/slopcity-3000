@@ -263,7 +263,7 @@ function inspect(sim: Sim, net: TrackNet, info: EditInfo, shape: TrackShape): In
       for (const k2 of [...near.nodes, ...near.edges.map((id) => -id)]) {
         for (const a of mine) {
           for (const b of tris(other, k2)) {
-            if (!convexOverlap(a, b, 0.02)) continue;
+            if (!trianglesMeet(a, b, 0.02)) continue;
             if (k2 > 0 || !nearCrossing(a) || !nearCrossing(b)) {
               fail(blocked);
               break outer;
@@ -293,8 +293,28 @@ function triBounds(tris: number[][]): [number, number, number, number] {
 }
 
 function anyOverlap(a: number[][], b: number[][], tol: number): boolean {
-  for (const p of a) for (const q of b) if (convexOverlap(p, q, tol)) return true;
+  if (!boxesMeet(triBounds(a), triBounds(b), tol)) return false;
+  for (const p of a) for (const q of b) if (trianglesMeet(p, q, tol)) return true;
   return false;
+}
+
+function boxesMeet(a: [number, number, number, number], b: [number, number, number, number], tol: number): boolean {
+  return Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > tol && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > tol;
+}
+
+/** Overlap of two triangles, with a cheap bounding-box test first. */
+function trianglesMeet(p: number[], q: number[], tol: number): boolean {
+  if (
+    Math.min(Math.max(p[0], p[2], p[4]), Math.max(q[0], q[2], q[4])) - Math.max(Math.min(p[0], p[2], p[4]), Math.min(q[0], q[2], q[4])) <=
+    tol
+  )
+    return false;
+  if (
+    Math.min(Math.max(p[1], p[3], p[5]), Math.max(q[1], q[3], q[5])) - Math.max(Math.min(p[1], p[3], p[5]), Math.min(q[1], q[3], q[5])) <=
+    tol
+  )
+    return false;
+  return convexOverlap(p, q, tol);
 }
 
 /**
