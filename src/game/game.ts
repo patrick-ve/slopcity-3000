@@ -17,6 +17,7 @@ import { buildDemoCity } from './demo';
 import { applyPlan, linePath, planLine, planPlace, planZone, type LineKind } from '../sim/actions';
 import type { ZoneKind } from '../sim/types';
 import { UndoStack } from '../sim/undo';
+import { buildStarter, getStarter } from '../sim/starters';
 
 export type Mode = 'menu' | 'play';
 
@@ -187,6 +188,52 @@ export class Game {
     this.ui.onMonth();
   }
 
+  /** Starter city being built (only one at a time). */
+  private building = false;
+
+  /**
+   * Build a starter city in small steps (the page stays responsive and the
+   * menu shows progress), then hand it to the player.
+   */
+  async playStarter(id: string, onProgress?: (p: number) => void): Promise<void> {
+    if (this.building) return;
+    this.building = true;
+    try {
+      const def = getStarter(id);
+      const gen = buildStarter(def);
+      let step = gen.next();
+      while (!step.done) {
+        onProgress?.(step.value);
+        await new Promise((res) => setTimeout(res, 0));
+        step = gen.next();
+      }
+      onProgress?.(1);
+      const sim = step.value;
+      this.beginPlay(sim);
+      this.focusCity(sim);
+      this.ui.toast({ title: `Welcome to ${def.name}`, text: def.tagline, kind: 'good' }, 8000);
+      this.ui.pushNews(`Mayor takes office in ${def.name}, population ${sim.stats.residents.toLocaleString('en-US')}`, 'good');
+    } finally {
+      this.building = false;
+    }
+  }
+
+  /** Point the camera at the middle of a city's buildings. */
+  private focusCity(sim: Sim, zoom = 18): void {
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (const b of sim.world.buildings.values()) {
+      sx += b.x;
+      sy += b.y;
+      n++;
+    }
+    const w = sim.world;
+    this.renderer.cam.lookAt(n ? sx / n : w.w / 2, n ? sy / n : w.h / 2, zoom);
+    this.renderer.cam.goalPitch = 0.66;
+    this.renderer.cam.snap();
+  }
+
   loadSlot(slot: string): boolean {
     const sim = loadFromSlot(slot);
     if (!sim) {
@@ -199,17 +246,7 @@ export class Game {
 
   private startLoaded(sim: Sim): void {
     this.beginPlay(sim);
-    let sx = 0;
-    let sy = 0;
-    let n = 0;
-    for (const b of sim.world.buildings.values()) {
-      sx += b.x;
-      sy += b.y;
-      n++;
-    }
-    const w = sim.world;
-    this.renderer.cam.lookAt(n ? sx / n : w.w / 2, n ? sy / n : w.h / 2, 18);
-    this.renderer.cam.snap();
+    this.focusCity(sim);
     this.ui.toast(
       {
         title: `Welcome back to ${sim.city.name}`,

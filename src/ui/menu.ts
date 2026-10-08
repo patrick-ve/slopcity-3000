@@ -4,6 +4,7 @@ import { randomSeed } from '../util/rng';
 import type { MapOptions, TerrainKind, TreeKind, WaterKind } from '../sim/mapgen';
 import type { Difficulty } from '../sim/types';
 import { listSaves } from '../sim/save';
+import { STARTERS, type StarterCity } from '../sim/starters';
 import type { Game } from '../game/game';
 import { icon } from './icons';
 
@@ -35,7 +36,11 @@ const CITY_NAMES = [
   'Bevel Hills',
 ];
 
-/** Title screen, new-city setup and load list. */
+const TERRAIN_NAMES: Record<TerrainKind, string> = { flat: 'Flat', rolling: 'Rolling', hilly: 'Hilly', mountains: 'Mountains' };
+const WATER_NAMES: Record<WaterKind, string> = { none: 'no water', lakes: 'lakes', river: 'river', coast: 'coast', island: 'island' };
+const DIFFICULTY_NAMES: Record<Difficulty, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+/** Title screen, new-city setup, starter cities and load list. */
 export class Menu {
   readonly el: HTMLDivElement;
   private opts: NewGameOptions;
@@ -84,6 +89,7 @@ export class Menu {
     buttons.appendChild(
       h('button', { class: `btn ${auto ? '' : 'primary'}`, html: `${icon('building', 18)}New city`, onclick: () => this.showNew() }),
     );
+    buttons.appendChild(h('button', { class: 'btn', html: `${icon('city', 18)}Starter cities`, onclick: () => this.showStarters() }));
     if (saves.some((s) => s.slot !== 'autosave'))
       buttons.appendChild(h('button', { class: 'btn', html: `${icon('load', 18)}Load city`, onclick: () => this.showLoad() }));
     buttons.appendChild(
@@ -98,6 +104,63 @@ export class Menu {
       h('div', { class: 'foot' }, 'A low-poly homage to SimCity 3000 · TypeScript + WebGL'),
     );
     this.el.appendChild(card);
+  }
+
+  private showStarters(): void {
+    clear(this.el);
+    const list = h('div', { class: 'slots' });
+    for (const s of STARTERS) {
+      const land = `${TERRAIN_NAMES[s.map.terrain]}, ${WATER_NAMES[s.map.water]}`;
+      list.appendChild(
+        h(
+          'div',
+          { class: 'slot' },
+          h(
+            'div',
+            { class: 'info' },
+            h('div', { class: 'nm' }, s.name),
+            h('div', { class: 'desc' }, s.tagline),
+            h(
+              'div',
+              { class: 'meta' },
+              `${s.startYear + s.years} · about ${int(s.population)} residents · ${land} · ${s.map.size}×${s.map.size} · ${DIFFICULTY_NAMES[s.difficulty]}`,
+            ),
+          ),
+          h('button', { class: 'btn small primary', onclick: () => void this.buildStarter(s) }, 'Play'),
+        ),
+      );
+    }
+    this.el.appendChild(
+      h(
+        'div',
+        { class: 'newcity glass' },
+        h('h2', {}, 'Starter cities'),
+        h('p', { class: 'note', style: 'margin:-6px 0 12px' }, 'Take over a city that already runs. Each one is built fresh from its map.'),
+        list,
+        h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: () => this.showMain() }, 'Back')),
+      ),
+    );
+  }
+
+  /** Progress card while a starter city is built. */
+  private async buildStarter(s: StarterCity): Promise<void> {
+    clear(this.el);
+    const fill = h('div', { class: 'fill' });
+    const label = h('div', { class: 'meta' }, 'Laying out roads and zones …');
+    this.el.appendChild(
+      h(
+        'div',
+        { class: 'card glass building' },
+        h('h2', {}, `Building ${s.name}`),
+        h('p', { class: 'tagline' }, s.tagline),
+        h('div', { class: 'progress' }, fill),
+        label,
+      ),
+    );
+    await this.game.playStarter(s.id, (p) => {
+      fill.style.width = `${Math.round(p * 100)}%`;
+      if (p > 0.06) label.textContent = `Growing the city: ${s.startYear + Math.min(s.years, Math.floor(p * s.years))}`;
+    });
   }
 
   private showLoad(): void {

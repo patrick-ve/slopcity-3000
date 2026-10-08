@@ -1262,6 +1262,35 @@ input[type='number']:focus,
   color: var(--muted);
 }
 
+.slot .desc {
+  font-size: 12.5px;
+  margin: 2px 0 3px;
+}
+
+.menu .building {
+  text-align: center;
+}
+
+.menu .building h2 {
+  margin: 0 0 6px;
+}
+
+.progress {
+  height: 8px;
+  margin: 16px 0 10px;
+  border-radius: 99px;
+  background: var(--panel-3);
+  overflow: hidden;
+}
+
+.progress .fill {
+  width: 0;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #f5b942, #ffe7a8);
+  transition: width 0.15s;
+}
+
 .help-grid {
   display: grid;
   grid-template-columns: auto 1fr;

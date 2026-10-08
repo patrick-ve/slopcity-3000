@@ -23,10 +23,16 @@ export interface CityPlan {
   block?: number;
   /** Highest zone density, used downtown (1–3). */
   density?: 1 | 2 | 3;
+  /** Ring edges (share of the radius): full density inside the first, one step lower inside the second. */
+  rings?: [number, number];
   /** Direction of the industrial district from the centre (radians, 0 = east). */
   industryAngle?: number;
+  /** Half-width of the industrial district (radians). */
+  industryWidth?: number;
   /** Basic services, or the full set (hospital, college, museum, stadium …). */
   services?: 'basic' | 'full';
+  /** Distance between service buildings, relative to the default (> 1: fewer, cheaper). */
+  serviceSpacing?: number;
   /** Power plant to build (several are built when the city needs them). */
   power?: string;
   /** Elevated highway across the city with on-ramps. */
@@ -138,20 +144,35 @@ export function layoutCity(sim: Sim, plan: CityPlan = {}): PlannedCity {
       let good = 0;
       for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) if (okLand(x, y)) good++;
       if (good < B * B * 0.45) continue;
-      if (b.r > 0.32 && angleDiff(b.angle, indAngle) < 0.62) {
+      if (b.r > 0.32 && angleDiff(b.angle, indAngle) < (plan.industryWidth ?? 0.62)) {
         b.kind = 'ind';
-        b.density = Math.min(2, density);
-      } else if (b.r < 0.2) {
-        b.kind = 'com';
         b.density = density;
       } else {
-        b.kind = rng.next() < (b.r < 0.6 ? 0.22 : 0.1) ? 'com' : 'res';
-        b.density = b.r < 0.42 ? density : b.r < 0.72 ? Math.max(1, density - 1) : 1;
-        if (b.kind === 'com') b.density = Math.min(b.density, 2);
+        b.kind = 'res';
+        const [inner, outer] = plan.rings ?? [0.42, 0.72];
+        b.density = b.r < inner ? density : b.r < outer ? Math.max(1, density - 1) : 1;
       }
       if (b.kind === 'res' && rng.next() < 0.06) b.kind = 'park';
       blocks.push(b);
     }
+  }
+  // shops and offices: enough jobs for the residents, downtown first, then neighbourhood shops
+  const tilesOf = (b: Block) => (b.x1 - b.x0 + 1) * (b.y1 - b.y0 + 1);
+  const homes = blocks.filter((b) => b.kind === 'res').sort((a, b) => a.r - b.r);
+  let resEstimate = 0;
+  for (const b of homes) resEstimate += tilesOf(b) * RES_PER_TILE[b.density];
+  // zones rarely fill up completely: plan shops for about half the possible residents
+  const jobsNeeded = resEstimate * 0.35 * 0.17 * 1.25;
+  const minShops = Math.max(2, Math.round(homes.length * 0.08));
+  let comJobs = 0;
+  let shops = 0;
+  for (const [k, b] of homes.entries()) {
+    if (comJobs >= jobsNeeded && shops >= minShops) break;
+    if (k > 0 && b.r > 0.2 && rng.next() < 0.5) continue;
+    b.kind = 'com';
+    b.density = b.r < 0.22 ? density : Math.min(density, 2);
+    comJobs += tilesOf(b) * JOBS_PER_TILE[b.density] * 0.6;
+    shops++;
   }
   const zoneOf = { res: 1, com: 2, ind: 3 } as const;
   for (const b of blocks) {
@@ -257,18 +278,19 @@ export function layoutCity(sim: Sim, plan: CityPlan = {}): PlannedCity {
   line('pipe', xs[0], cy, xs[xs.length - 1], cy);
 
   // ---- services
-  spread('police_station', 26);
-  spread('fire_station', 26, 8);
-  spread('school', 26, 4);
+  const sp = plan.serviceSpacing ?? 1;
+  spread('police_station', 26 * sp);
+  spread('fire_station', 26 * sp, 8);
+  spread('school', 26 * sp, 4);
   if (plan.services === 'full') {
-    spread('hospital', 36, 10);
+    spread('hospital', 36 * sp, 10);
     placeNear('college', cx + S, cy + S);
     placeNear('library', cx - S, cy);
     placeNear('museum', cx, cy - S);
     if (resCap > 15000) placeNear('stadium', cx - S * 2, cy + S * 2);
     placeNear('water_treatment', ix, iy, ['ind', 'res']);
   } else {
-    spread('clinic', 22, 6);
+    spread('clinic', 22 * sp, 6);
   }
   // garbage: neighbours take 1,500 t a month; burn the rest
   const garbage = resCap * 0.75 * 0.01 + jobs * 0.75 * 0.015;
