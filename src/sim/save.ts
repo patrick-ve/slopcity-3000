@@ -3,7 +3,8 @@ import { Sim, type CityState } from './sim';
 import type { Building } from './types';
 import { DEFS } from './catalog';
 
-export const SAVE_VERSION = 1;
+/** Current save format. Bump it (and add a migration) whenever the format changes. */
+export const SAVE_VERSION = 2;
 
 interface SaveFile {
   version: number;
@@ -79,10 +80,39 @@ export function serialize(sim: Sim): string {
   return JSON.stringify(file);
 }
 
+/** A save file of any version, before migration. */
+type OldSave = { version: number; app?: string; city?: Record<string, unknown> } & Record<string, unknown>;
+
+/**
+ * Upgrade steps for old save files: MIGRATIONS[v] turns a version v file into
+ * version v + 1. Steps run in order, so a file from any older version loads.
+ */
+const MIGRATIONS: Record<number, (file: OldSave) => void> = {
+  // v2: sandbox mode and scenarios
+  1: (file) => {
+    const city = (file.city ??= {});
+    city.sandbox ??= false;
+    city.scenario ??= null;
+  },
+};
+
+/** Bring a parsed save file up to SAVE_VERSION. */
+export function migrate(raw: unknown): SaveFile {
+  const file = raw as OldSave;
+  if (!file || typeof file !== 'object' || file.app !== 'slopcity') throw new Error('Not a SlopCity save file');
+  if (typeof file.version !== 'number' || file.version < 1) throw new Error('Unknown save file version');
+  if (file.version > SAVE_VERSION) throw new Error('This save file is from a newer version of SlopCity 3000');
+  for (let v = file.version; v < SAVE_VERSION; v++) {
+    const step = MIGRATIONS[v];
+    if (!step) throw new Error(`Cannot upgrade a version ${v} save file`);
+    step(file);
+    file.version = v + 1;
+  }
+  return file as unknown as SaveFile;
+}
+
 export function deserialize(json: string): Sim {
-  const file = JSON.parse(json) as SaveFile;
-  if (file.app !== 'slopcity') throw new Error('Not a SlopCity save file');
-  if (file.version > SAVE_VERSION) throw new Error('Save file is from a newer version');
+  const file = migrate(JSON.parse(json));
   const w = new World(file.w, file.h);
   w.seaLevel = file.seaLevel;
   w.heights.set(unb64(file.layers.heights));

@@ -12,6 +12,7 @@ import {
   type HistoryPoint,
   type Loan,
   type MonthlyReport,
+  type ScenarioState,
   type Speed,
   type Tax,
 } from './types';
@@ -58,6 +59,10 @@ export interface CityState {
   debtMonths: number;
   /** Random seed for the map (kept for saves). */
   seed: number;
+  /** Sandbox mode: unlimited money and every building unlocked. */
+  sandbox: boolean;
+  /** The scenario being played, or null in a free game. */
+  scenario: ScenarioState | null;
 }
 
 export interface SimMessage {
@@ -139,6 +144,8 @@ export class Sim {
       disastersEnabled: true,
       debtMonths: 0,
       seed: opts.seed,
+      sandbox: false,
+      scenario: null,
     };
     this.disasters = new Disasters(this);
     this.news = new NewsDesk(this);

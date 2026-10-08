@@ -59,6 +59,15 @@ export interface Building {
   unhappy: number;
 }
 
+/** Progress of a scenario (see game/scenarios.ts). */
+export interface ScenarioState {
+  id: string;
+  /** Game days: start of the scenario and its deadline. */
+  start: number;
+  deadline: number;
+  status: 'active' | 'won' | 'lost';
+}
+
 export type Speed = 0 | 1 | 2 | 3;
 export const SPEED_NAMES = ['Paused', 'Turtle', 'Llama', 'Cheetah'] as const;
 /** Real milliseconds per simulated day for each speed. */
