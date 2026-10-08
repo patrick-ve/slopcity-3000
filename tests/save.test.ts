@@ -40,4 +40,19 @@ describe('save migrations', () => {
     expect(copy.city.sandbox).toBe(true);
     expect(copy.city.scenario).toEqual(sim.city.scenario);
   });
+
+  it('keeps huge maps small by run-length encoding the layers', async () => {
+    const { applyPlan, linePath, planLine, planZone } = await import('../src/sim/actions');
+    const sim = flatSim(256);
+    applyPlan(planLine(sim, 'road', linePath(10, 10, 240, 10)));
+    applyPlan(planZone(sim, 10, 11, 240, 13, 1, 2));
+    sim.world.landfill[500] = 123.5;
+    const json = serialize(sim);
+    expect(json.length).toBeLessThan(120_000);
+    const copy = deserialize(json);
+    expect([...copy.world.zone]).toEqual([...sim.world.zone]);
+    expect([...copy.world.net]).toEqual([...sim.world.net]);
+    expect([...copy.world.heights]).toEqual([...sim.world.heights]);
+    expect(copy.world.landfill[500]).toBeCloseTo(123.5);
+  });
 });

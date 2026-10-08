@@ -4,7 +4,7 @@ import type { Building } from './types';
 import { DEFS } from './catalog';
 
 /** Current save format. Bump it (and add a migration) whenever the format changes. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 interface SaveFile {
   version: number;
@@ -32,6 +32,39 @@ function unb64(str: string): Uint8Array {
   const out = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
   return out;
+}
+
+/** Run-length encoding: pairs of (run length 1..255, value). */
+function rle(bytes: Uint8Array): Uint8Array {
+  const out: number[] = [];
+  for (let i = 0; i < bytes.length;) {
+    const v = bytes[i];
+    let n = 1;
+    while (n < 255 && i + n < bytes.length && bytes[i + n] === v) n++;
+    out.push(n, v);
+    i += n;
+  }
+  return Uint8Array.from(out);
+}
+
+function unrle(packed: Uint8Array, length: number): Uint8Array {
+  const out = new Uint8Array(length);
+  let o = 0;
+  for (let i = 0; i + 1 < packed.length && o < length; i += 2) {
+    out.fill(packed[i + 1], o, Math.min(length, o + packed[i]));
+    o += packed[i];
+  }
+  return out;
+}
+
+/** A map layer as text: run-length encoded when that is smaller (most layers are mostly empty). */
+function packLayer(bytes: Uint8Array): string {
+  const packed = rle(bytes);
+  return packed.length < bytes.length * 0.9 ? `rle:${b64(packed)}` : b64(bytes);
+}
+
+function unpackLayer(text: string, length: number): Uint8Array {
+  return text.startsWith('rle:') ? unrle(unb64(text.slice(4)), length) : unb64(text);
 }
 
 const BUILDING_KEYS: (keyof Building)[] = [
@@ -62,13 +95,13 @@ export function serialize(sim: Sim): string {
     h: w.h,
     seaLevel: w.seaLevel,
     layers: {
-      heights: b64(w.heights),
-      zone: b64(w.zone),
-      density: b64(w.density),
-      net: b64(w.net),
-      tree: b64(w.tree),
-      rubble: b64(w.rubble),
-      landfill: b64(new Uint8Array(w.landfill.buffer.slice(0))),
+      heights: packLayer(w.heights),
+      zone: packLayer(w.zone),
+      density: packLayer(w.density),
+      net: packLayer(w.net),
+      tree: packLayer(w.tree),
+      rubble: packLayer(w.rubble),
+      landfill: packLayer(new Uint8Array(w.landfill.buffer.slice(0))),
     },
     buildings: [...w.buildings.values()].map((b) =>
       BUILDING_KEYS.map((k) => (typeof b[k] === 'boolean' ? (b[k] ? 1 : 0) : (b[k] as number | string))),
@@ -94,6 +127,8 @@ const MIGRATIONS: Record<number, (file: OldSave) => void> = {
     city.sandbox ??= false;
     city.scenario ??= null;
   },
+  // v3: map layers may be run-length encoded ("rle:" prefix); plain base64 layers stay valid
+  2: () => {},
 };
 
 /** Bring a parsed save file up to SAVE_VERSION. */
@@ -115,13 +150,14 @@ export function deserialize(json: string): Sim {
   const file = migrate(JSON.parse(json));
   const w = new World(file.w, file.h);
   w.seaLevel = file.seaLevel;
-  w.heights.set(unb64(file.layers.heights));
-  w.zone.set(unb64(file.layers.zone));
-  w.density.set(unb64(file.layers.density));
-  w.net.set(unb64(file.layers.net));
-  w.tree.set(unb64(file.layers.tree));
-  w.rubble.set(unb64(file.layers.rubble));
-  w.landfill.set(new Float32Array(unb64(file.layers.landfill).buffer));
+  const n = w.size;
+  w.heights.set(unpackLayer(file.layers.heights, w.heights.length));
+  w.zone.set(unpackLayer(file.layers.zone, n));
+  w.density.set(unpackLayer(file.layers.density, n));
+  w.net.set(unpackLayer(file.layers.net, n));
+  w.tree.set(unpackLayer(file.layers.tree, n));
+  w.rubble.set(unpackLayer(file.layers.rubble, n));
+  w.landfill.set(new Float32Array(unpackLayer(file.layers.landfill, n * 4).buffer));
   for (const row of file.buildings) {
     const b = {} as Record<string, unknown>;
     BUILDING_KEYS.forEach((k, i) => (b[k] = row[i]));
