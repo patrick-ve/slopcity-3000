@@ -226,6 +226,12 @@ button {
   background: var(--panel-3);
 }
 
+.iconbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: transparent;
+}
+
 .iconbtn.on {
   background: rgba(245, 185, 66, 0.16);
   border-color: rgba(245, 185, 66, 0.55);

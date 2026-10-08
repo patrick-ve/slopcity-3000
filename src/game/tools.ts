@@ -1,7 +1,6 @@
 import type { ZoneKind } from '../sim/types';
 import { COSTS, PLOPPABLES, type PlopCategory } from '../sim/catalog';
 import {
-  applyPlan,
   linePath,
   planBulldoze,
   planDezone,
@@ -311,7 +310,8 @@ export class ToolController {
       }
       return;
     }
-    applyPlan(plan);
+    const sim = this.game.sim;
+    if (!sim || !this.game.undo.apply(sim, plan, this.tool.name)) return;
     const r = this.game.renderer;
     if (plan.kind === 'place' && plan.def) {
       r.dust(plan.x! + plan.w! / 2, plan.y! + plan.h! / 2, Math.max(plan.w!, plan.h!) * 0.6);

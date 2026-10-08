@@ -40,6 +40,7 @@ export class UI {
   private flyout: HTMLDivElement | null = null;
   private flyoutCat: string | null = null;
   private catButtons = new Map<string, HTMLButtonElement>();
+  private undoBtn!: HTMLButtonElement;
   private statFunds!: HTMLDivElement;
   private statFundsDelta!: HTMLSpanElement;
   private statPop!: HTMLDivElement;
@@ -216,6 +217,15 @@ export class UI {
       this.toolbar.appendChild(b);
       if (i === 0 || i === 2 || i === 6) this.toolbar.appendChild(h('div', { class: 'sep' }));
     });
+    this.toolbar.appendChild(h('div', { class: 'sep' }));
+    this.undoBtn = h('button', {
+      class: 'iconbtn',
+      title: 'Nothing to undo',
+      html: icon('undo', 22),
+      disabled: true,
+      onclick: () => this.game.undoLast(),
+    }) as HTMLButtonElement;
+    this.toolbar.appendChild(this.undoBtn);
     this.root.appendChild(this.toolbar);
   }
 
@@ -562,6 +572,9 @@ export class UI {
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
       this.hudTimer = 0.2;
+      const last = this.game.undo.peek();
+      this.undoBtn.disabled = !last;
+      this.undoBtn.title = last ? `Undo: ${last.label} (Ctrl/Cmd + Z)` : 'Nothing to undo';
       const c = sim.city;
       this.cityName.textContent = c.name;
       this.statFunds.textContent = money(c.funds);

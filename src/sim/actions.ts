@@ -25,6 +25,8 @@ export interface Plan {
   ok: boolean;
   reason?: string;
   apply: () => void;
+  /** Terrain corner indices the plan changes (terraforming). */
+  corners?: number[];
   /** For building placement. */
   def?: BuildingDef;
   x?: number;
@@ -589,7 +591,7 @@ export function planTerraform(sim: Sim, mode: TerraformMode, x0: number, y0: num
       if (w.inBounds(x, y)) tiles.push({ x, y, ok: !reason, change: changed.length > 0 });
     }
   }
-  return finish(
+  const plan = finish(
     sim,
     'terraform',
     tiles,
@@ -628,6 +630,8 @@ export function planTerraform(sim: Sim, mode: TerraformMode, x0: number, y0: num
     },
     reason,
   );
+  plan.corners = changed.map(([k]) => k);
+  return plan;
 }
 
 export function applyPlan(plan: Plan): boolean {

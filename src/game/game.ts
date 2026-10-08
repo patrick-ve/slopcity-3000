@@ -3,7 +3,7 @@ import { generateMap, type MapOptions } from '../sim/mapgen';
 import { Sim } from '../sim/sim';
 import type { Speed } from '../sim/types';
 import { deserialize, loadFromSlot, saveToSlot, serialize } from '../sim/save';
-import { formatDate } from '../util/format';
+import { formatDate, money } from '../util/format';
 import { randomSeed } from '../util/rng';
 import { GameRenderer, type ShadowQuality } from '../render/renderer';
 import type { OverlayId } from '../render/overlays';
@@ -16,6 +16,7 @@ import { QUERY_TOOL, ToolController, type ToolSpec } from './tools';
 import { buildDemoCity } from './demo';
 import { applyPlan, linePath, planLine, planPlace, planZone, type LineKind } from '../sim/actions';
 import type { ZoneKind } from '../sim/types';
+import { UndoStack } from '../sim/undo';
 
 export type Mode = 'menu' | 'play';
 
@@ -52,6 +53,8 @@ export class Game {
   readonly menu: Menu;
   readonly input: Input;
   readonly sfx = new Sfx();
+  /** Map actions that can be undone (Ctrl/Cmd + Z). */
+  readonly undo = new UndoStack();
   settings: Settings = loadSettings();
   undergroundManual = false;
   private lastSpeed: Speed = 2;
@@ -87,6 +90,7 @@ export class Game {
     for (const u of this.unsubs) u();
     this.unsubs = [];
     this.sim = sim;
+    this.undo.clear();
     this.renderer.setSim(sim);
     this.tools.setTool(QUERY_TOOL);
     this.ui.closeAll();
@@ -264,6 +268,24 @@ export class Game {
   togglePause(): void {
     if (!this.sim) return;
     this.setSpeed(this.sim.speed === 0 ? this.lastSpeed : 0);
+  }
+
+  /** Revert the most recent map action and refund its cost. */
+  undoLast(): void {
+    const sim = this.sim;
+    if (!sim || this.mode !== 'play') return;
+    const e = this.undo.undo(sim);
+    if (!e) {
+      this.sfx.play('error');
+      this.ui.toast({ title: 'Nothing to undo', text: 'Undo reverts building, zoning, bulldozing and terraforming.', kind: 'info' }, 2000);
+      return;
+    }
+    this.sfx.play('undo');
+    this.tools.refresh();
+    this.ui.toast(
+      { title: `Undone: ${e.label}`, text: e.refund > 0 ? `${money(e.refund)} refunded.` : 'The change is reverted.', kind: 'info' },
+      2200,
+    );
   }
 
   selectTool(spec: ToolSpec): void {

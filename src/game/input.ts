@@ -177,6 +177,11 @@ export class Input {
         g.ui.toast({ title: 'City saved', text: `Saved as “${g.sim.city.name}”.`, kind: 'good' }, 2000);
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      g.undoLast();
+      return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (PAN_KEYS[e.code]) {
       this.held.add(e.code);

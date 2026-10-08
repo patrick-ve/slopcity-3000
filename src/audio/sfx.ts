@@ -109,6 +109,10 @@ export class Sfx {
       case 'quake':
         this.noise(t, 2.5, 0.6, 70, 0.4);
         break;
+      case 'undo':
+        this.tone('triangle', 660, 440, t, 0.08, 0.1);
+        this.tone('triangle', 520, 330, t + 0.07, 0.1, 0.08);
+        break;
       case 'message':
         this.tone('sine', 740, 740, t, 0.1, 0.08);
         this.tone('sine', 988, 988, t + 0.09, 0.14, 0.08);

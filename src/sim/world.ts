@@ -249,8 +249,13 @@ export class World {
   }
 
   addBuilding(b: Omit<Building, 'id'>): Building {
-    const full: Building = { ...b, id: this.nextId++ };
+    return this.putBuilding({ ...b, id: this.nextId++ });
+  }
+
+  /** Insert a building that already has an id (undo, loading). */
+  putBuilding(full: Building): Building {
     this.buildings.set(full.id, full);
+    this.nextId = Math.max(this.nextId, full.id + 1);
     for (let y = full.y; y < full.y + full.h; y++) {
       for (let x = full.x; x < full.x + full.w; x++) {
         const i = this.idx(x, y);

@@ -62,6 +62,7 @@ export class HelpPanel implements Panel {
       ['B R P U Z', 'Bulldoze, roads, power, pipes, zones'],
       ['G / M / H', 'Grid, mute, help'],
       ['Esc', 'Cancel / query tool'],
+      ['Ctrl/Cmd + Z', 'Undo the last map action (refunds its cost)'],
       ['Ctrl/Cmd + S', 'Quick save'],
     ]);
   }

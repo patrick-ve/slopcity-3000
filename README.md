@@ -48,6 +48,7 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
 | `B` `R` `P` `U` `Z`                         | Bulldoze, road, power line, pipe, zones menu                   |
 | `G` / `M` / `H`                             | Grid, mute, help                                               |
 | `Esc`                                       | Close window / cancel / query tool                             |
+| `Ctrl`/`Cmd` + `Z`                          | Undo the last map action (refunds its cost)                    |
 | `Ctrl`/`Cmd` + `S`                          | Quick save                                                     |
 
 ## Features
