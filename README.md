@@ -29,7 +29,8 @@ needed to build. Every push to `main` runs CI and deploys the game to GitHub Pag
 
 Start a **new city**, take over one of the **starter cities**, or try a **scenario** from the main menu.
 
-1. Build a **road** (`R`). Zones only grow within 3 tiles of a road.
+1. Build a **road** (`R`). Zones only grow within 3 tiles of a road. Roads, rails and highways can follow the grid,
+   run straight at any angle or curve: pick **Grid**, **Straight** or **Curve** in the shape bar (`C`).
 2. **Zone** residential (green) and industrial (yellow) land along it (`Z`). Add commercial (blue) later.
 3. Build a **power plant**. Zoned land and buildings carry power to each other, but you need
    **power lines** (`P`) to cross roads and empty land. Unpowered zones show a lightning bolt.
@@ -53,7 +54,8 @@ Start a **new city**, take over one of the **starter cities**, or try a **scenar
 | Touch: three fingers                        | Drag up or down to tilt                                        |
 | `W` `A` `S` `D` / arrows                    | Pan                                                            |
 | `Q` / `E`                                   | Rotate the view 90°                                            |
-| `Shift` while dragging                      | Bend lines the other way                                       |
+| `Shift` while dragging                      | Bend lines the other way; snap free track to 15° steps         |
+| `C`                                         | Grid, straight or curved roads, rails and highways             |
 | `X` / `Tab`                                 | Rotate the building you are placing                            |
 | `Space`, `1` `2` `3`                        | Pause, Turtle, Llama, Cheetah                                  |
 | `B` `R` `P` `U` `Z`                         | Bulldoze, road, power line, pipe, zones menu                   |
@@ -72,6 +74,10 @@ Start a **new city**, take over one of the **starter cities**, or try a **scenar
 - **Infrastructure**: roads, rail with trains, elevated highways with on-ramps (from 1940), subways with
   stations (from 1910), power lines, underground water pipes, bus stops, train stations, seaport, airport.
   Commuters take the fastest route over streets, highways and subway lines.
+- **Free-angle track**: roads, rails and highways follow the grid, run straight at any angle or bend in smooth
+  curves. New track snaps to and joins existing track, makes junctions where it crosses, and cars and trains
+  follow the curves. Buildings stay on the grid and face the nearest road; every tile a road covers counts
+  as road for zoning, traffic and cost.
 - **Utilities**: coal, oil, gas, nuclear, wind, solar, microwave and fusion power (unlocked by
   year); pumps, towers, treatment and desalination; incinerators, waste-to-energy, recycling.
 - **Services**: police, fire, clinics, hospitals, schools, college, library, museum and eight
@@ -106,9 +112,12 @@ src/
               networks, traffic (layered commute graph), fields, demand, growth, budget,
               garbage, disasters, news, advisors, save/load with migrations, city planner,
               starter cities, scenarios
-  render/     Three.js renderer: chunked terrain/road/highway/object meshes, materials (window
-              and zone shaders), camera, picking, water, sky, cars, trains, particles, icons,
-              previews, overlays, procedural models (render/models/civic/*, growables/*)
+    tracks/   roads, rails and highways as graphs of straight and curved edges: geometry,
+              junction shapes, tile coverage, editing (join, split, cut) and build plans
+  render/     Three.js renderer: chunked terrain/object meshes, track meshes laid on the terrain
+              (render/tracks/*), materials (window and zone shaders), camera, picking, water, sky,
+              cars and trains on the track curves, particles, icons, previews, overlays,
+              procedural models (render/models/civic/*, growables/*)
   ui/         DOM interface: toolbar, HUD, menu, minimap, icons, one file per window (ui/panels/*)
   game/       glue: Game (main loop, modes, settings), tools, mouse/keyboard input, touch gestures
   audio/      WebAudio sound effects and the procedural jazz soundtrack (synthesised, no assets)
@@ -130,6 +139,7 @@ slop.dev.quickStart(); // new city without the menu
 slop.dev.buildDemo(); // lay out a sample town
 slop.dev.runDays(365 * 5); // fast-forward five years
 slop.dev.place('stadium', 40, 40);
+slop.dev.track('road', 20.5, 20.5, 40.5, 30.5, 35.5, 15.5); // a curve through (35.5, 15.5)
 slop.sim.disasters.trigger('tornado');
 ```
 
