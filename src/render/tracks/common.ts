@@ -77,8 +77,3 @@ export function trackBelow(world: World, x: number, z: number): boolean {
   }
   return false;
 }
-
-/** True if an on-ramp stands on the tile at (x, z). */
-export function rampAt(world: World, x: number, z: number): boolean {
-  return world.buildingAt(Math.floor(x), Math.floor(z))?.def === 'onramp';
-}

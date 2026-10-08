@@ -1,7 +1,8 @@
 import { LEVEL_H, type World } from '../../sim/world';
 import type { TrackNet } from '../../sim/tracks/net';
 import { PAL } from '../palette';
-import { pointAt, rampAt, sections, trackBelow, type Section } from './common';
+import { closestParam, curvePoint, lengthAt } from '../../sim/tracks/geom';
+import { pointAt, sections, trackBelow, type Section } from './common';
 import { inChunk, type Target } from './drape';
 import { pillar, quadOut, slab, triOut, wall } from './solid';
 
@@ -88,17 +89,86 @@ export function deckAt(world: World, net: TrackNet, id: number, s: number): numb
 
 // ---------------------------------------------------------------- meshes
 
+/** Front direction of each building rotation (an on-ramp's road side; its back meets the highway). */
+const FRONT: [number, number][] = [
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+  [1, 0],
+];
+
+/** Where an on-ramp meets a highway: the top of the ramp and the point on the deck edge it joins. */
+interface Mouth {
+  x: number;
+  z: number;
+  y: number;
+  /** Deck edge point and height. */
+  qx: number;
+  qz: number;
+  qy: number;
+}
+
+/** On-ramps in and around the chunk, with where they join the nearest highway deck. */
+function rampMouths(t: Target, net: TrackNet): Mouth[] {
+  const w = t.world;
+  const out: Mouth[] = [];
+  for (let y = Math.max(0, t.y0 - 2); y < Math.min(w.h, t.y1 + 2); y++) {
+    for (let x = Math.max(0, t.x0 - 2); x < Math.min(w.w, t.x1 + 2); x++) {
+      const b = w.buildingAt(x, y);
+      if (!b || b.def !== 'onramp' || b.x !== x || b.y !== y) continue;
+      const [fx, fz] = FRONT[b.rot & 3];
+      const mx = x + 0.5 - fx * 0.5;
+      const mz = y + 0.5 - fz * 0.5;
+      let best: { id: number; t: number; d: number } | null = null;
+      for (const id of net.query(mx - 2, mz - 2, mx + 2, mz + 2).edges) {
+        const [tt, d] = closestParam(net.curve(net.edges.get(id)!), mx, mz);
+        if (d < 1.6 && (!best || d < best.d)) best = { id, t: tt, d };
+      }
+      if (!best) continue;
+      const [px, pz] = curvePoint(net.curve(net.edges.get(best.id)!), best.t);
+      const k = DECK_HW / (Math.hypot(mx - px, mz - pz) || 1);
+      out.push({
+        x: mx,
+        z: mz,
+        y: w.footprintMax(x, y, 1, 1) * LEVEL_H + 0.004 + HIGHWAY_CLEAR,
+        qx: px + (mx - px) * k,
+        qz: pz + (mz - pz) * k,
+        qy: deckAt(w, net, best.id, lengthAt(net.poly(best.id), best.t)),
+      });
+    }
+  }
+  return out;
+}
+
+/** True if a barrier piece at (x, z) would block an on-ramp joining there. */
+function atMouth(mouths: Mouth[], x: number, z: number): boolean {
+  return mouths.some((m) => Math.hypot(m.qx - x, m.qz - z) < 0.36);
+}
+
 /** Elevated highways: decks, barriers, lane markings and pillars in one chunk. */
 export function buildHighways(t: Target): void {
   const net = t.world.tracks.highway;
+  const mouths = rampMouths(t, net);
   const near = net.query(t.x0 - 1, t.y0 - 1, t.x1 + 1, t.y1 + 1);
-  for (const id of near.edges) highwayEdge(t, net, id);
-  for (const id of near.nodes) highwayNode(t, net, id);
+  for (const id of near.edges) highwayEdge(t, net, id, mouths);
+  for (const id of near.nodes) highwayNode(t, net, id, mouths);
+  // a short deck from the top of each on-ramp to the highway's edge
+  for (const m of mouths) {
+    if (!inChunk(t, m.x, m.z) || Math.hypot(m.qx - m.x, m.qz - m.z) < 0.01) continue;
+    slab(t.buf, m.x, m.z, m.y, m.qx, m.qz, m.qy, 0.31, THICK, PAL.asphalt, SIDE);
+    const [dx, dz] = [m.qx - m.x, m.qz - m.z];
+    const l = Math.hypot(dx, dz);
+    const [nx, nz] = [-dz / l, dx / l];
+    for (const side of [-1, 1]) {
+      const o = 0.29 * side;
+      slab(t.buf, m.x + nx * o, m.z + nz * o, m.y + 0.06, m.qx + nx * o, m.qz + nz * o, m.qy + 0.06, 0.02, 0.06, BARRIER, BARRIER);
+    }
+  }
 }
 
 const at = (c: Section, o: number, y: number) => [c.x + c.nx * o, y, c.z + c.nz * o];
 
-function highwayEdge(t: Target, net: TrackNet, id: number): void {
+function highwayEdge(t: Target, net: TrackNet, id: number, mouths: Mouth[]): void {
   const w = t.world;
   const buf = t.buf;
   const [s0, s1] = net.span(id);
@@ -129,7 +199,7 @@ function highwayEdge(t: Target, net: TrackNet, id: number): void {
       const [bx, , bz] = at(b, o, 0);
       wall(buf, ax, az, ya, ya - THICK, bx, bz, yb, yb - THICK, a.nx * side, a.nz * side, SIDE);
       // barrier, open where an on-ramp joins
-      if (rampAt(w, mx + a.nx * side * 0.65, mz + a.nz * side * 0.65)) continue;
+      if (atMouth(mouths, mx + a.nx * side * DECK_HW, mz + a.nz * side * DECK_HW)) continue;
       const r = (DECK_HW - 0.025) * side;
       const [rx0, , rz0] = at(a, r, 0);
       const [rx1, , rz1] = at(b, r, 0);
@@ -176,7 +246,7 @@ function pillars(t: Target, x: number, z: number, dx: number, dz: number, top: n
   for (const [px, pz] of sides) pillar(t.buf, px, pz, ground(px, pz), top, dx, dz, PILLAR, 0.06);
 }
 
-function highwayNode(t: Target, net: TrackNet, id: number): void {
+function highwayNode(t: Target, net: TrackNet, id: number, mouths: Mouth[]): void {
   const w = t.world;
   const buf = t.buf;
   const node = net.nodes.get(id)!;
@@ -196,7 +266,7 @@ function highwayNode(t: Target, net: TrackNet, id: number): void {
     for (const side of [-1, 1]) {
       const [ax, az] = P(from, (DECK_HW - 0.025) * side);
       const [bx, bz] = P(cap - 0.025, (DECK_HW - 0.025) * side);
-      if (!rampAt(w, (ax + bx) / 2 + nx * side * 0.6, (az + bz) / 2 + nz * side * 0.6))
+      if (!atMouth(mouths, (ax + bx) / 2 + nx * side * 0.025, (az + bz) / 2 + nz * side * 0.025))
         slab(buf, ax, az, y + 0.06, bx, bz, y + 0.06, 0.025, 0.06, BARRIER, BARRIER);
     }
     const [lx, lz] = P(cap - 0.025, -DECK_HW);
@@ -228,8 +298,7 @@ function highwayNode(t: Target, net: TrackNet, id: number): void {
       if (Math.hypot(bx - ax, bz - az) < 1e-6) continue;
       const [ox, oz] = [(ax + bx) / 2 - node.x, (az + bz) / 2 - node.y];
       wall(buf, ax, az, y, y - THICK, bx, bz, y, y - THICK, ox, oz, SIDE);
-      const ol = Math.hypot(ox, oz) || 1;
-      if (rampAt(w, (ax + bx) / 2 + (ox / ol) * 0.4, (az + bz) / 2 + (oz / ol) * 0.4)) continue;
+      if (atMouth(mouths, (ax + bx) / 2, (az + bz) / 2)) continue;
       slab(buf, inner[k], inner[k + 1], y + 0.06, inner[k + 2], inner[k + 3], y + 0.06, 0.025, 0.06, BARRIER, BARRIER);
     }
   }
