@@ -158,10 +158,14 @@ export function fillOverlay(sim: Sim, id: OverlayId, out: Uint8Array): void {
         if (!water) set(i, ramp([0xf5b041, 0xe67e22, 0xa93226], v * 1.4), 30 + v * 300);
         break;
       }
-      case 'traffic':
-        if (w.net[i] & NET.ROAD) set(i, ramp([0x2ecc71, 0xf1c40f, 0xe74c3c], w.traffic[i] / 1.1), 235);
-        else if (!water) set(i, [40, 40, 50], 110);
+      case 'traffic': {
+        const n = w.net[i];
+        if (n & (NET.ROAD | NET.HIGHWAY)) {
+          const t = Math.max(n & NET.ROAD ? w.traffic[i] : 0, n & NET.HIGHWAY ? w.hwyTraffic[i] : 0);
+          set(i, ramp([0x2ecc71, 0xf1c40f, 0xe74c3c], t / 1.1), 235);
+        } else if (!water) set(i, [40, 40, 50], 110);
         break;
+      }
       case 'power': {
         const relevant = w.bld[i] || w.zone[i] || w.net[i] & NET.POWER;
         if (relevant) set(i, w.powered[i] ? hexToRgb(0xf7dc6f) : hexToRgb(0xe74c3c), 220);

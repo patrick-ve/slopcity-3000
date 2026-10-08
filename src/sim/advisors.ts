@@ -90,8 +90,9 @@ export function getAdvice(sim: Sim): Advice[] {
   if (c.eq > 110) add('health', 0, `Our citizens are well educated (EQ ${Math.round(c.eq)}). High-tech industry will move in.`);
 
   // transport
-  if (s.avgTraffic > 0.9) add('transport', 2, 'Traffic is gridlocked. Add more roads, bus stops or rail lines.');
-  else if (s.avgTraffic > 0.55) add('transport', 1, 'Traffic is getting heavy. Consider mass transit.');
+  if (s.avgTraffic > 0.9) add('transport', 2, 'Traffic is gridlocked. Build subways, highways with on-ramps, or more roads.');
+  else if (s.avgTraffic > 0.55) add('transport', 1, 'Traffic is getting heavy. A subway line or a highway would help.');
+  if (s.subwayRiders > 0) add('transport', 0, `${Math.round(s.subwayRiders).toLocaleString('en-US')} commuters ride the subway every day.`);
   if (s.connections.road === 0 && s.residents > 300)
     add('transport', 1, 'Connect a road to the map edge to link us to our neighbours. It boosts demand.');
   if (s.indJobs > 3000 && !s.hasSeaport) add('transport', 1, 'Industry wants a seaport to reach world markets.');

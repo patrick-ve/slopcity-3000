@@ -58,8 +58,9 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
 - **Zones**: residential, commercial, industrial in light / medium / dense, plus landfills.
   Buildings grow on lots of 1×1 up to 3×3, in three wealth levels (heavy, manufacturing and
   high-tech industry), redevelop when demand rises and get abandoned when conditions turn bad.
-- **Infrastructure**: roads, rail with trains, power lines, underground water pipes, bus stops,
-  train stations, seaport, airport.
+- **Infrastructure**: roads, rail with trains, elevated highways with on-ramps (from 1940), subways with
+  stations (from 1910), power lines, underground water pipes, bus stops, train stations, seaport, airport.
+  Commuters take the fastest route over streets, highways and subway lines.
 - **Utilities**: coal, oil, gas, nuclear, wind, solar, microwave and fusion power (unlocked by
   year); pumps, towers, treatment and desalination; incinerators, waste-to-energy, recycling.
 - **Services**: police, fire, clinics, hospitals, schools, college, library, museum and eight

@@ -144,8 +144,8 @@ function polePosition(world: World, x: number, y: number): [number, number, numb
   const n = world.net[i];
   let px = x + 0.5;
   let pz = y + 0.5;
-  if (n & (NET.ROAD | NET.RAIL)) {
-    const flag = n & NET.ROAD ? NET.ROAD : NET.RAIL;
+  if (n & (NET.ROAD | NET.RAIL | NET.HIGHWAY)) {
+    const flag = n & NET.ROAD ? NET.ROAD : n & NET.RAIL ? NET.RAIL : NET.HIGHWAY;
     const m = world.netMask(x, y, flag);
     const ns = (m & (DIR_N | DIR_S)) !== 0;
     const ew = (m & (DIR_E | DIR_W)) !== 0;
@@ -205,7 +205,7 @@ export function buildObjects(world: World, cx: number, cy: number): ObjectChunk 
       }
       const n = world.net[i];
       if (n & NET.POWER) addPowerLine(world, out, x, y);
-      if (n & (NET.ROAD | NET.RAIL)) continue;
+      if (n & (NET.ROAD | NET.RAIL | NET.HIGHWAY)) continue;
       if (world.isWater(x, y)) continue;
       if (world.rubble[i]) {
         const mesh = getModel({ model: 'rubble', w: 1, h: 1, variant: (x * 7 + y * 3) & 7 });
@@ -225,8 +225,39 @@ export function buildObjects(world: World, cx: number, cy: number): ObjectChunk 
   return out;
 }
 
-/** Underground pipes for one chunk (shown in the underground view). */
-export function buildPipes(world: World, cx: number, cy: number): ObjectBuf {
+const SUBWAY_ON = 0xe0823c;
+const SUBWAY_OFF = 0x8a7f78;
+
+/** Subway tunnel (wide, under the pipes) and a platform where a station stands above. */
+function addSubway(world: World, buf: ObjectBuf, x: number, y: number, linked: boolean): void {
+  const col = linked ? SUBWAY_ON : SUBWAY_OFF;
+  const cy0 = world.surfaceY(x + 0.5, y + 0.5) + 0.02;
+  const mask = world.netMask(x, y, NET.SUBWAY);
+  const c = [x + 0.5, cy0, y + 0.5];
+  let arms = 0;
+  for (const [dx, dz, bit] of [
+    [0, -1, DIR_N],
+    [1, 0, DIR_E],
+    [0, 1, DIR_S],
+    [-1, 0, DIR_W],
+  ] as const) {
+    if (!(mask & bit)) continue;
+    arms++;
+    const ex = x + 0.5 + dx * 0.5;
+    const ez = y + 0.5 + dz * 0.5;
+    buf.beam(c, [ex, world.surfaceY(ex, ez) + 0.02, ez], 0.16, col);
+  }
+  if (arms !== 2) buf.beam([c[0], c[1] - 0.05, c[2]], [c[0], c[1] + 0.05, c[2]], 0.2, col);
+  const b = world.buildingAt(x, y);
+  if (b?.def === 'subway_station') {
+    // platform: a light slab with a coloured roof marker
+    buf.beam([x + 0.18, cy0 + 0.07, y + 0.5], [x + 0.82, cy0 + 0.07, y + 0.5], 0.42, linked ? 0xf4efe6 : 0xa8a29a);
+    buf.beam([x + 0.5, cy0 + 0.1, y + 0.5], [x + 0.5, cy0 + 0.22, y + 0.5], 0.14, linked ? 0x2f6fd6 : 0x6b7280);
+  }
+}
+
+/** Underground pipes and subway lines for one chunk (shown in the underground view). */
+export function buildPipes(world: World, cx: number, cy: number, subwayLive?: Uint8Array): ObjectBuf {
   const buf = new ObjectBuf();
   const x0 = cx * CHUNK;
   const y0 = cy * CHUNK;
@@ -235,6 +266,7 @@ export function buildPipes(world: World, cx: number, cy: number): ObjectBuf {
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const i = world.idx(x, y);
+      if (world.net[i] & NET.SUBWAY) addSubway(world, buf, x, y, subwayLive?.[i] === 1);
       if (!(world.net[i] & NET.PIPE)) continue;
       const watered = world.watered[i] === 1;
       const col = watered ? 0x3fa9f5 : 0x8a96a3;

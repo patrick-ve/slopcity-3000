@@ -1,6 +1,6 @@
 /** Ploppable building models by model key. */
 import type { ModelFn } from '../types';
-import { airport, bus_stop, seaport, train_station } from './transport';
+import { airport, bus_stop, onramp, seaport, subway_station, train_station } from './transport';
 import {
   coal_plant,
   fusion_plant,
@@ -25,6 +25,8 @@ export const PLOP_MODELS: Record<string, ModelFn> = {
   train_station,
   seaport,
   airport,
+  onramp,
+  subway_station,
   coal_plant,
   oil_plant,
   gas_plant,

@@ -3,12 +3,29 @@
  * used for the live preview) and is applied with `applyPlan`.
  */
 import { NET, type ZoneKind } from './types';
-import { COSTS, getDef, type BuildingDef } from './catalog';
+import { COSTS, getDef, LINE_YEARS, type BuildingDef } from './catalog';
 import type { Sim } from './sim';
 import { DIRTY_GROUND, DIRTY_OBJECTS, DIRTY_PIPES, MAX_LEVEL } from './world';
 import { faceRoad } from './growth';
 
-export type LineKind = 'road' | 'rail' | 'power' | 'pipe';
+export type LineKind = 'road' | 'rail' | 'power' | 'pipe' | 'highway' | 'subway';
+
+/** Network flag of each line kind. */
+export const LINE_FLAGS: Record<LineKind, number> = {
+  road: NET.ROAD,
+  rail: NET.RAIL,
+  power: NET.POWER,
+  pipe: NET.PIPE,
+  highway: NET.HIGHWAY,
+  subway: NET.SUBWAY,
+};
+
+/** Surface networks that block zones, buildings and trees. */
+export const SURFACE_NET = NET.ROAD | NET.RAIL | NET.POWER | NET.HIGHWAY;
+/** Networks under the ground (kept by the surface bulldozer). */
+export const UNDERGROUND_NET = NET.PIPE | NET.SUBWAY;
+/** Networks that pin the terrain corners under them. */
+const FIXED_NET = NET.ROAD | NET.RAIL | NET.HIGHWAY;
 
 export interface PlanTile {
   x: number;
@@ -96,7 +113,7 @@ export function planZone(sim: Sim, x0: number, y0: number, x1: number, y1: numbe
   for (const [x, y] of rectTiles(x0, y0, x1, y1)) {
     if (!w.inBounds(x, y)) continue;
     const i = w.idx(x, y);
-    let ok = !w.isWater(x, y) && !(w.net[i] & (NET.ROAD | NET.RAIL | NET.POWER)) && w.tileMax(x, y) - w.tileMin(x, y) <= 2;
+    let ok = !w.isWater(x, y) && !(w.net[i] & SURFACE_NET) && w.tileMax(x, y) - w.tileMin(x, y) <= 2;
     const b = w.buildingAt(x, y);
     if (b) {
       const def = getDef(b.def);
@@ -166,10 +183,13 @@ function straightAxis(sim: Sim, x: number, y: number, flag: number): 'x' | 'y' |
 
 export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Plan {
   const w = sim.world;
-  const flag = { road: NET.ROAD, rail: NET.RAIL, power: NET.POWER, pipe: NET.PIPE }[kind];
+  const flag = LINE_FLAGS[kind];
   const tiles: PlanTile[] = [];
   let cost = 0;
   let reason: string | undefined;
+  const year = LINE_YEARS[kind];
+  const tooEarly = year !== undefined && sim.year < year;
+  if (tooEarly) reason = `Available in ${year}`;
   for (let k = 0; k < path.length; k++) {
     const [x, y] = path[k];
     if (!w.inBounds(x, y)) continue;
@@ -182,6 +202,15 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
     if (kind === 'pipe') {
       ok = !water;
       tileCost = COSTS.pipe;
+    } else if (kind === 'subway') {
+      tileCost = water ? COSTS.subwayUnderWater : COSTS.subway;
+    } else if (kind === 'highway') {
+      // elevated: crosses roads, rails, slopes and water, but not buildings
+      if (b) {
+        ok = false;
+        reason ??= 'Blocked by a building';
+      }
+      tileCost = water ? COSTS.highwayBridge : COSTS.highway;
     } else if (kind === 'power') {
       ok = !b;
       tileCost = water ? COSTS.powerLine * 2 : COSTS.powerLine;
@@ -215,11 +244,12 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
         tileCost = kind === 'road' ? COSTS.road : COSTS.rail;
       }
     }
+    if (tooEarly) ok = false;
     const change = ok && !has;
     if (change) cost += tileCost;
     tiles.push({ x, y, ok, change });
   }
-  if (kind !== 'pipe' && kind !== 'power') {
+  if (kind === 'road' || kind === 'rail' || kind === 'highway') {
     // a bridge must not end on water: the first/last path tile must be land unless connecting to existing network
     const first = path[0];
     const last = path[path.length - 1];
@@ -244,16 +274,18 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
         if (!t.ok || !t.change) continue;
         const i = w.idx(t.x, t.y);
         w.net[i] |= flag;
-        if (kind !== 'pipe') {
+        const underground = kind === 'pipe' || kind === 'subway';
+        if (!underground) {
           w.tree[i] = 0;
           w.rubble[i] = 0;
           if (w.zone[i]) w.setZone(t.x, t.y, 0, 0);
         }
-        w.markArea(t.x, t.y, t.x, t.y, kind === 'pipe' ? DIRTY_PIPES : DIRTY_GROUND | DIRTY_OBJECTS);
+        w.markArea(t.x, t.y, t.x, t.y, underground ? DIRTY_PIPES : DIRTY_GROUND | DIRTY_OBJECTS);
       }
       w.tilesDirty = true;
-      if (kind === 'road') sim.dirty.roads = true;
-      if (kind === 'road' || kind === 'rail') w.roadVersion++;
+      // the commute graph uses roads, highways and subways
+      if (kind === 'road' || kind === 'highway' || kind === 'subway') sim.dirty.roads = true;
+      if (kind === 'road' || kind === 'rail' || kind === 'highway') w.roadVersion++;
       sim.dirty.power = true;
       sim.dirty.water = true;
       sim.events.emit('sound', 'build');
@@ -277,8 +309,27 @@ export function isAvailable(sim: Sim, def: BuildingDef): { ok: boolean; why?: st
 }
 
 /** Best rotation for a placed building: shore buildings face water, others face a road. */
+/** Front direction (dx, dy) of each building rotation. */
+const FRONT: [number, number][] = [
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+  [1, 0],
+];
+
+/** Rotation that puts a road in front of (x, y) and a highway behind it, or null. */
+export function rampRotation(sim: Sim, x: number, y: number): number | null {
+  const w = sim.world;
+  for (let r = 0; r < 4; r++) {
+    const [fx, fy] = FRONT[r];
+    if (w.hasNet(x + fx, y + fy, NET.ROAD) && w.hasNet(x - fx, y - fy, NET.HIGHWAY)) return r;
+  }
+  return null;
+}
+
 export function autoRotation(sim: Sim, def: BuildingDef, x: number, y: number): number {
   const w = sim.world;
+  if (def.needsHighway) return rampRotation(sim, x, y) ?? 0;
   if (def.needsShore) {
     // find the side with the most water
     const counts = [0, 0, 0, 0]; // rot 0 faces +y, 1 -x, 2 -y, 3 +x
@@ -339,9 +390,9 @@ export function planPlace(sim: Sim, defId: string, x: number, y: number, rot: nu
         } else if (w.bld[i]) {
           ok = false;
           reason ??= 'Blocked by a building';
-        } else if (w.net[i] & (NET.ROAD | NET.RAIL | NET.POWER)) {
+        } else if (w.net[i] & SURFACE_NET) {
           ok = false;
-          reason ??= 'Blocked by a road, rail or power line';
+          reason ??= 'Blocked by a road, rail, highway or power line';
         }
       } else reason ??= 'Outside the map';
       if (!ok) allOk = false;
@@ -365,7 +416,20 @@ export function planPlace(sim: Sim, defId: string, x: number, y: number, rot: nu
         reason ??= 'Must be built next to rail tracks';
       }
     }
+    if (def.needsHighway && rampRotation(sim, x, y) === null) {
+      allOk = false;
+      reason ??= 'Place it in a line between a road and a highway';
+    }
+    if (def.needsSubway) {
+      let sub = false;
+      for (let yy = y; yy < y + fh; yy++) for (let xx = x; xx < x + fw; xx++) if (w.hasNet(xx, yy, NET.SUBWAY)) sub = true;
+      if (!sub) {
+        allOk = false;
+        reason ??= 'Must be built on a subway line';
+      }
+    }
   }
+  if (def.needsHighway) r = rampRotation(sim, x, y) ?? r;
   if (!allOk) for (const t of tiles) t.ok = false;
   const cost = def.cost ?? 0;
   const plan = finish(
@@ -400,6 +464,8 @@ export function planPlace(sim: Sim, defId: string, x: number, y: number, rot: nu
       sim.dirty.power = true;
       sim.dirty.water = true;
       sim.dirty.coverage = true;
+      // stations and on-ramps change the commute graph
+      if (def.needsSubway || def.needsHighway) sim.dirty.roads = true;
       sim.events.emit('building', { type: 'add', b });
       sim.events.emit('sound', 'build');
     },
@@ -426,9 +492,9 @@ export function planBulldoze(sim: Sim, x0: number, y0: number, x1: number, y1: n
     const i = w.idx(x, y);
     let change = false;
     if (underground) {
-      if (w.net[i] & NET.PIPE) {
+      if (w.net[i] & UNDERGROUND_NET) {
         change = true;
-        cost += 1;
+        cost += w.net[i] & NET.SUBWAY ? COSTS.bulldoze : 1;
       }
     } else {
       if (w.bld[i] && !buildings.has(w.bld[i])) {
@@ -437,7 +503,7 @@ export function planBulldoze(sim: Sim, x0: number, y0: number, x1: number, y1: n
         cost += COSTS.bulldozeBuilding * b.w * b.h;
         change = true;
       } else if (w.bld[i]) change = true;
-      if (w.net[i] & (NET.ROAD | NET.RAIL | NET.POWER)) {
+      if (w.net[i] & SURFACE_NET) {
         cost += w.isWater(x, y) ? COSTS.bulldoze * 4 : COSTS.bulldoze;
         change = true;
       }
@@ -453,18 +519,22 @@ export function planBulldoze(sim: Sim, x0: number, y0: number, x1: number, y1: n
     let roads = false;
     for (const id of buildings) {
       const b = w.removeBuilding(id);
-      if (b) sim.events.emit('building', { type: 'remove', b });
+      if (!b) continue;
+      const def = getDef(b.def);
+      if (def.needsSubway || def.needsHighway) roads = true;
+      sim.events.emit('building', { type: 'remove', b });
     }
     for (const t of tiles) {
       if (!t.change) continue;
       const i = w.idx(t.x, t.y);
       if (underground) {
-        w.net[i] &= ~NET.PIPE;
+        if (w.net[i] & NET.SUBWAY) roads = true;
+        w.net[i] &= ~UNDERGROUND_NET;
         w.markArea(t.x, t.y, t.x, t.y, DIRTY_PIPES);
         continue;
       }
-      if (w.net[i] & (NET.ROAD | NET.RAIL)) roads = true;
-      w.net[i] &= NET.PIPE;
+      if (w.net[i] & FIXED_NET) roads = true;
+      w.net[i] &= UNDERGROUND_NET;
       w.tree[i] = 0;
       w.rubble[i] = 0;
       w.markArea(t.x, t.y, t.x, t.y, DIRTY_GROUND | DIRTY_OBJECTS);
@@ -490,7 +560,7 @@ export function planTrees(sim: Sim, x0: number, y0: number, x1: number, y1: numb
   for (const [x, y] of rectTiles(x0, y0, x1, y1)) {
     if (!w.inBounds(x, y)) continue;
     const i = w.idx(x, y);
-    const ok = !w.isWater(x, y) && !w.bld[i] && !(w.net[i] & (NET.ROAD | NET.RAIL));
+    const ok = !w.isWater(x, y) && !w.bld[i] && !(w.net[i] & (NET.ROAD | NET.RAIL | NET.HIGHWAY));
     const change = ok && w.tree[i] < 3;
     if (change) cost += COSTS.tree;
     tiles.push({ x, y, ok, change });
@@ -523,7 +593,7 @@ function lockedCorner(sim: Sim, cx: number, cy: number): boolean {
   ]) {
     if (!w.inBounds(tx, ty)) continue;
     const i = w.idx(tx, ty);
-    if (w.bld[i] || w.net[i] & (NET.ROAD | NET.RAIL)) return true;
+    if (w.bld[i] || w.net[i] & FIXED_NET) return true;
   }
   return false;
 }

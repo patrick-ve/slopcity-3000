@@ -70,6 +70,11 @@ export class QueryPanel implements Panel {
         if (def.water) add('Water output', `${int(def.water)} kL`);
         if (def.burn) add('Burns garbage', `${int(def.burn)} t/month`);
         if (def.service) add('Coverage radius', `${def.service.radius} tiles`);
+        if (def.needsSubway) {
+          const linked = sim.subwayLinked.has(bld.id);
+          add('Subway line', linked ? 'Running' : 'Needs a second station on this line');
+          if (linked) add('Riders (city)', `${int(sim.stats.subwayRiders)} a day`);
+        }
         if (def.upkeep) add(def.upkeep < 0 ? 'Income' : 'Upkeep', `${money(Math.abs(def.upkeep))}/month`);
       }
       const pu = powerUseOf(bld, def);
@@ -84,7 +89,9 @@ export class QueryPanel implements Panel {
       if (n & NET.ROAD) parts.push(w.isWater(tx, ty) ? 'Bridge' : 'Road');
       if (n & NET.RAIL) parts.push('Rail');
       if (n & NET.POWER) parts.push('Power line');
+      if (n & NET.HIGHWAY) parts.push(w.isWater(tx, ty) ? 'Highway bridge' : 'Highway');
       if (n & NET.PIPE) parts.push('Water pipe');
+      if (n & NET.SUBWAY) parts.push('Subway');
       this.win.setTitle(
         parts.length
           ? parts.join(' + ')
@@ -102,6 +109,8 @@ export class QueryPanel implements Panel {
         add('Road access', w.roadDist[i] <= 3 ? 'Yes' : 'No (needs a road within 3 tiles)');
       }
       if (n & NET.ROAD) add('Traffic', pct(Math.min(1.5, w.traffic[i])));
+      if (n & NET.HIGHWAY) add('Highway traffic', pct(Math.min(1.5, w.hwyTraffic[i])));
+      if (n & NET.SUBWAY) add('Subway line', sim.subwayLive[i] ? 'Running' : 'Needs two stations');
       if (w.tree[i]) add('Trees', ['', 'Some', 'Many', 'Forest'][w.tree[i]]);
       if (w.rubble[i]) add('Rubble', 'Bulldoze to clear');
     }

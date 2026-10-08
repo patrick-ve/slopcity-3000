@@ -17,7 +17,7 @@ import {
   type Tax,
 } from './types';
 import { PLOPPABLES } from './catalog';
-import { updatePower, updateRoadAccess, updateWater } from './networks';
+import { updatePower, updateRoadAccess, updateTransitLinks, updateWater } from './networks';
 import { emptyAccess, updateTraffic, type AccessData } from './traffic';
 import { updateCoverage, updateCrime, updateLandValue, updatePollution, updateStaticLand } from './fields';
 import { emptyStats, updateDemand, updateStats, type CityStats } from './demand';
@@ -113,6 +113,10 @@ export class Sim {
   garbageExported = 0;
   /** Development budget per zone kind (residents/jobs that may still be added). */
   growthBudget = [0, 0, 0, 0, 0];
+  /** Ids of subway stations that share a line with another station. */
+  subwayLinked = new Set<number>();
+  /** 1 for subway tiles on a line with two or more stations. */
+  subwayLive = new Uint8Array(0);
 
   constructor(world: World, opts: NewCityOptions) {
     this.world = world;
@@ -195,7 +199,9 @@ export class Sim {
     const any = d.roads || d.power || d.water || d.coverage || d.land;
     if (force || d.roads) {
       updateRoadAccess(this);
+      updateTransitLinks(this);
       d.roads = false;
+      d.coverage = true;
       d.power = true;
       d.water = true;
     }
@@ -240,6 +246,8 @@ export class Sim {
   }
 
   private stepMonth(): void {
+    // refresh networks every month (fires and disasters change them too)
+    this.dirty.roads = true;
     this.dirty.power = true;
     this.dirty.water = true;
     this.recompute(false);

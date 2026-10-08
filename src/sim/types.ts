@@ -11,6 +11,10 @@ export const NET = {
   RAIL: 2,
   POWER: 4,
   PIPE: 8,
+  /** Underground subway line. */
+  SUBWAY: 16,
+  /** Elevated highway (can run above roads and rails). */
+  HIGHWAY: 32,
 } as const;
 
 export type ServiceKind = 'police' | 'fire' | 'health' | 'education' | 'parks' | 'transit';

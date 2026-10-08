@@ -44,7 +44,9 @@ export function computeBudget(sim: Sim): MonthlyReport {
     if (def.dept) departments[def.dept] += up * c.funding[def.dept];
     else utilities += up;
   }
-  departments.roads += (s.roadTiles * MAINTENANCE.road + s.railTiles * MAINTENANCE.rail) * c.funding.roads;
+  departments.roads +=
+    (s.roadTiles * MAINTENANCE.road + s.railTiles * MAINTENANCE.rail + s.highwayTiles * MAINTENANCE.highway) * c.funding.roads;
+  departments.transit += s.subwayTiles * MAINTENANCE.subway * c.funding.transit;
   utilities += s.powerLineTiles * MAINTENANCE.powerLine + s.pipeTiles * MAINTENANCE.pipe;
 
   let ordIncome = 0;

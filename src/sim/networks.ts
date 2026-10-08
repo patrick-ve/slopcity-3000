@@ -2,6 +2,7 @@ import { NET, type Building } from './types';
 import { getDef } from './catalog';
 import type { Sim } from './sim';
 import { powerUseOf, waterUseOf } from './util';
+import { DIRTY_PIPES } from './world';
 
 /** Max distance (tiles) at which a road gives a lot "transport access". */
 export const ROAD_REACH = 3;
@@ -44,9 +45,11 @@ export function updateRoadAccess(sim: Sim): void {
   c.rail = 0;
   c.power = 0;
   c.pipe = 0;
+  c.highway = 0;
   const edge = (x: number, y: number) => {
     const n = w.net[w.idx(x, y)];
     if (n & NET.ROAD) c.road++;
+    if (n & NET.HIGHWAY) c.highway++;
     if (n & NET.RAIL) c.rail++;
     if (n & NET.POWER) c.power++;
     if (n & NET.PIPE) c.pipe++;
@@ -58,6 +61,53 @@ export function updateRoadAccess(sim: Sim): void {
   for (let y = 1; y < w.h - 1; y++) {
     edge(0, y);
     edge(w.w - 1, y);
+  }
+}
+
+/**
+ * Subway stations that share a line with at least one other station. Only
+ * those carry riders (and give transit coverage).
+ */
+export function updateTransitLinks(sim: Sim): void {
+  const w = sim.world;
+  const comp = new Int32Array(w.size).fill(-1);
+  const stack: number[] = [];
+  let next = 0;
+  for (let i = 0; i < w.size; i++) {
+    if (comp[i] >= 0 || !(w.net[i] & NET.SUBWAY)) continue;
+    comp[i] = next;
+    stack.push(i);
+    while (stack.length) {
+      const j = stack.pop()!;
+      const x = j % w.w;
+      const y = (j / w.w) | 0;
+      for (const k of [x > 0 ? j - 1 : -1, x < w.w - 1 ? j + 1 : -1, y > 0 ? j - w.w : -1, y < w.h - 1 ? j + w.w : -1]) {
+        if (k < 0 || comp[k] >= 0 || !(w.net[k] & NET.SUBWAY)) continue;
+        comp[k] = next;
+        stack.push(k);
+      }
+    }
+    next++;
+  }
+  const perLine = new Map<number, number[]>();
+  for (const b of w.buildings.values()) {
+    if (b.def !== 'subway_station' || b.build > 0) continue;
+    const c = comp[w.idx(b.x, b.y)];
+    if (c < 0) continue;
+    let list = perLine.get(c);
+    if (!list) perLine.set(c, (list = []));
+    list.push(b.id);
+  }
+  sim.subwayLinked.clear();
+  for (const ids of perLine.values()) if (ids.length >= 2) for (const id of ids) sim.subwayLinked.add(id);
+  // tiles of running lines (for the underground view)
+  if (sim.subwayLive.length !== w.size) sim.subwayLive = new Uint8Array(w.size);
+  for (let i = 0; i < w.size; i++) {
+    const live = comp[i] >= 0 && (perLine.get(comp[i])?.length ?? 0) >= 2 ? 1 : 0;
+    if (sim.subwayLive[i] !== live) {
+      sim.subwayLive[i] = live;
+      w.markDirty(i % w.w, (i / w.w) | 0, DIRTY_PIPES);
+    }
   }
 }
 

@@ -22,7 +22,11 @@ export interface CityStats {
   railTiles: number;
   powerLineTiles: number;
   pipeTiles: number;
-  connections: { road: number; rail: number; power: number; pipe: number };
+  highwayTiles: number;
+  subwayTiles: number;
+  /** Commuters who ride the subway each month. */
+  subwayRiders: number;
+  connections: { road: number; rail: number; power: number; pipe: number; highway: number };
   avgLandValue: number;
   avgPollution: number;
   avgCrime: number;
@@ -68,7 +72,10 @@ export function emptyStats(): CityStats {
     railTiles: 0,
     powerLineTiles: 0,
     pipeTiles: 0,
-    connections: { road: 0, rail: 0, power: 0, pipe: 0 },
+    highwayTiles: 0,
+    subwayTiles: 0,
+    subwayRiders: 0,
+    connections: { road: 0, rail: 0, power: 0, pipe: 0, highway: 0 },
     avgLandValue: 0,
     avgPollution: 0,
     avgCrime: 0,
@@ -161,6 +168,8 @@ export function updateStats(sim: Sim): void {
   let rails = 0;
   let lines = 0;
   let pipes = 0;
+  let highways = 0;
+  let subways = 0;
   const zt = [0, 0, 0, 0, 0];
   const ez = [0, 0, 0, 0, 0];
   let unpZones = 0;
@@ -170,6 +179,8 @@ export function updateStats(sim: Sim): void {
     if (n & NET.RAIL) rails++;
     if (n & NET.POWER) lines++;
     if (n & NET.PIPE) pipes++;
+    if (n & NET.HIGHWAY) highways++;
+    if (n & NET.SUBWAY) subways++;
     const z = w.zone[i];
     if (z) {
       zt[z]++;
@@ -183,6 +194,8 @@ export function updateStats(sim: Sim): void {
   s.railTiles = rails;
   s.powerLineTiles = lines;
   s.pipeTiles = pipes;
+  s.highwayTiles = highways;
+  s.subwayTiles = subways;
   s.zoneTiles = zt;
   s.emptyZoneTiles = ez;
   s.unpoweredZones = unpZones;
@@ -217,7 +230,7 @@ export function updateDemand(sim: Sim, alpha: number): void {
     bi += def.demand.i ?? 0;
   }
   const conn = s.connections;
-  const connBonus = Math.min(0.12, conn.road * 0.03) + Math.min(0.08, conn.rail * 0.04);
+  const connBonus = Math.min(0.12, conn.road * 0.03) + Math.min(0.08, conn.rail * 0.04) + Math.min(0.1, conn.highway * 0.05);
 
   // ---- residential
   const jobPull = (jobs * 2.1 + 140 - R) / Math.max(250, R * 0.45);

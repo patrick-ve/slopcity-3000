@@ -88,6 +88,8 @@ export function updateCoverage(sim: Sim): void {
   for (const b of w.buildings.values()) {
     const def = getDef(b.def);
     if (!def.service || b.build > 0 || b.fire > 0) continue;
+    // a lone subway station has nowhere to go
+    if (def.needsSubway && !sim.subwayLinked.has(b.id)) continue;
     let eff = def.service.strength * deptEffect(sim, def.dept);
     if (needsPower(def) && !b.powered) eff *= 0.4;
     const field = w.cover[def.service.kind];
@@ -150,6 +152,7 @@ export function updatePollution(sim: Sim): void {
   }
   for (let i = 0; i < w.size; i++) {
     if (w.net[i] & NET.ROAD) emit[i] += Math.min(1.5, w.traffic[i]) * 0.22;
+    if (w.net[i] & NET.HIGHWAY) emit[i] += Math.min(1.5, w.hwyTraffic[i]) * 0.3;
     if (w.zone[i] === 4 && w.landfill[i] > 0) emit[i] += 0.12;
   }
   const a = new Float32Array(w.size);
@@ -207,8 +210,10 @@ export function updateLandValue(sim: Sim): void {
   const comBlur = new Float32Array(w.size);
   boxBlur(com, comBlur, w.w, w.h, 6);
   // traffic noise (blurred)
+  const loud = new Float32Array(w.size);
+  for (let i = 0; i < w.size; i++) loud[i] = Math.max(w.traffic[i], w.hwyTraffic[i] * 1.3);
   const noise = new Float32Array(w.size);
-  boxBlur(w.traffic, noise, w.w, w.h, 1);
+  boxBlur(loud, noise, w.w, w.h, 1);
   const ord = sim.city.ordinances;
   const garbagePenalty = Math.min(0.12, sim.city.garbageBacklog / 6000);
   const cv = w.cover;

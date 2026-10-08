@@ -274,6 +274,10 @@ export class UI {
         }
         if ((def.upkeep ?? 0) < 0) costText = `+${money(-(def.upkeep ?? 0))}/mo`;
       } else if (t.kind === 'zone') costText = t.zone === 4 ? money(COSTS.landfill) : money(COSTS.zone[t.density ?? 1]);
+      if (t.year && sim && sim.year < t.year && !sim.city.sandbox) {
+        disabled = true;
+        sub = `Available in ${t.year}`;
+      }
       const swatch = h('div', { class: 'swatch', html: icon(t.icon, 18) });
       if (t.color) {
         swatch.style.background = t.color;

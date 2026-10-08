@@ -1,5 +1,5 @@
 import type { ZoneKind } from '../sim/types';
-import { COSTS, PLOPPABLES, type PlopCategory } from '../sim/catalog';
+import { COSTS, LINE_YEARS, PLOPPABLES, type PlopCategory } from '../sim/catalog';
 import {
   linePath,
   planBulldoze,
@@ -33,6 +33,8 @@ export interface ToolSpec {
   def?: string;
   hotkey?: string;
   group?: string;
+  /** First year the tool can be used. */
+  year?: number;
 }
 
 export interface ToolCategory {
@@ -150,6 +152,24 @@ export const CATEGORIES: ToolCategory[] = [
         hotkey: 'R',
       },
       { key: 'line:rail', kind: 'line', line: 'rail', name: 'Rail', sub: `§${COSTS.rail}/tile`, icon: 'rail' },
+      {
+        key: 'line:highway',
+        kind: 'line',
+        line: 'highway',
+        name: 'Highway',
+        sub: `§${COSTS.highway}/tile · elevated, needs on-ramps`,
+        icon: 'highway',
+        year: LINE_YEARS.highway,
+      },
+      {
+        key: 'line:subway',
+        kind: 'line',
+        line: 'subway',
+        name: 'Subway',
+        sub: `§${COSTS.subway}/tile · underground, needs stations`,
+        icon: 'subway',
+        year: LINE_YEARS.subway,
+      },
       ...plopTools('transport', 'transport'),
     ],
   },
@@ -203,7 +223,14 @@ export function findTool(key: string): ToolSpec | undefined {
 
 const RED = 0xef4444;
 const DIM = 0x9aa6b5;
-const LINE_COLORS: Record<LineKind, number> = { road: 0x4ade80, rail: 0xe7e5e4, power: 0xfde047, pipe: 0x38bdf8 };
+const LINE_COLORS: Record<LineKind, number> = {
+  road: 0x4ade80,
+  rail: 0xe7e5e4,
+  power: 0xfde047,
+  pipe: 0x38bdf8,
+  highway: 0xfb923c,
+  subway: 0xc084fc,
+};
 const ZONE_HEX = [0, 0x4fe39a, 0x5aa9ff, 0xffc94d, 0xa07a4c];
 
 export interface TooltipInfo {
@@ -231,7 +258,7 @@ export class ToolController {
     this.plan = null;
     this.lastKey = '';
     if (spec.kind !== 'place') this.rot = 'auto';
-    const wantUnder = spec.kind === 'line' && spec.line === 'pipe';
+    const wantUnder = spec.kind === 'line' && (spec.line === 'pipe' || spec.line === 'subway');
     this.game.setUnderground(wantUnder || (this.game.undergroundManual && spec.kind === 'bulldoze'));
     this.refresh();
   }

@@ -1,8 +1,9 @@
-/** Transport models: bus stop, train station, seaport and airport. */
+/** Transport models: bus stop, train station, seaport, airport, highway on-ramp and subway entrance. */
 import type { ModelFn } from '../types';
-import { FLOOR, shade, WIN } from '../../geom';
-import { airplane, ASPHALT, bench, car, deck, type G, GLASS_TINT, lamp, type P2, PATH, prism, tree, WHITE } from './shared';
+import { FLOOR, shade, type V3, WIN } from '../../geom';
+import { airplane, ASPHALT, bench, bush, car, deck, fence, type G, GLASS_TINT, lamp, type P2, PATH, prism, tree, WHITE } from './shared';
 import { PAL } from '../../palette';
+import { HIGHWAY_CLEAR } from '../../ground';
 
 // --------------------------------------------------------------- transport
 
@@ -193,4 +194,126 @@ export const airport: ModelFn = (g, c) => {
   deck(g, 3.2, 1.2, 4.3, 0.15, 0.013, ASPHALT);
   for (let i = 0; i < 4; i++) car(g, 3.35 + i * 0.25, 0.35, r.pick(PAL.cars), false);
   lamp(g, 4.4, 1.1, 0.3);
+};
+
+/**
+ * Sloped box between x0 and x1: its top runs from height yA at zA to yB at
+ * zB, and it is `th` thick (th = 0 fills it down to the ground).
+ */
+function slope(g: G, x0: number, x1: number, zA: number, yA: number, zB: number, yB: number, th = 0): void {
+  const bA = th ? yA - th : 0;
+  const bB = th ? yB - th : 0;
+  const zc = (zA + zB) / 2;
+  const up = Math.sign(zA - zB) || 1;
+  g.face(
+    [
+      [x0, yA, zA],
+      [x1, yA, zA],
+      [x1, yB, zB],
+      [x0, yB, zB],
+    ] as V3[],
+    [0, 1, (yA - yB) * up],
+  );
+  g.face(
+    [
+      [x0, bA, zA],
+      [x0, yA, zA],
+      [x0, yB, zB],
+      [x0, bB, zB],
+    ] as V3[],
+    [-1, 0, 0],
+  );
+  g.face(
+    [
+      [x1, bA, zA],
+      [x1, yA, zA],
+      [x1, yB, zB],
+      [x1, bB, zB],
+    ] as V3[],
+    [1, 0, 0],
+  );
+  g.face(
+    [
+      [x0, bA, zA],
+      [x1, bA, zA],
+      [x1, yA, zA],
+      [x0, yA, zA],
+    ] as V3[],
+    [0, 0, zA - zc],
+  );
+  g.face(
+    [
+      [x0, bB, zB],
+      [x1, bB, zB],
+      [x1, yB, zB],
+      [x0, yB, zB],
+    ] as V3[],
+    [0, 0, zB - zc],
+  );
+}
+
+/** Ramp from the road (front, +z) up to the highway deck (back, −z). */
+export const onramp: ModelFn = (g) => {
+  const top = HIGHWAY_CLEAR;
+  // asphalt apron where the ramp meets the road
+  deck(g, 0.16, 0.82, 0.84, 1.0, 0.012, ASPHALT);
+  // embankment with retaining walls, then the driving surface and barriers
+  g.noWin().color(0xb9b4aa);
+  slope(g, 0.18, 0.82, 0.96, 0.02, 0.0, top - 0.004);
+  g.color(ASPHALT);
+  slope(g, 0.2, 0.8, 0.98, 0.026, 0.0, top, 0.01);
+  g.color(0xd8d4cc);
+  slope(g, 0.18, 0.22, 0.98, 0.08, 0.0, top + 0.06, 0.06);
+  slope(g, 0.78, 0.82, 0.98, 0.08, 0.0, top + 0.06, 0.06);
+  // dashed centre line
+  g.color(PAL.laneWhite);
+  for (const [z0, z1] of [
+    [0.9, 0.72],
+    [0.58, 0.4],
+    [0.26, 0.08],
+  ]) {
+    const y0 = 0.026 + (0.98 - z0) * ((top - 0.026) / 0.98) + 0.004;
+    const y1 = 0.026 + (0.98 - z1) * ((top - 0.026) / 0.98) + 0.004;
+    slope(g, 0.49, 0.51, z0, y0, z1, y1, 0.004);
+  }
+  // green direction sign on two posts
+  g.color(PAL.steelDark);
+  g.box(0.06, 0, 0.84, 0.08, 0.36, 0.86, { noTop: true });
+  g.box(0.06, 0.3, 0.84, 0.16, 0.31, 0.86);
+  g.color(0x2e7d32).panel([0.1, 0.28, 0.87], [0.3, 0.28, 0.87], [0.3, 0.4, 0.87], [0.1, 0.4, 0.87]);
+  g.color(WHITE).panel([0.14, 0.33, 0.875], [0.26, 0.33, 0.875], [0.26, 0.345, 0.875], [0.14, 0.345, 0.875]);
+  lamp(g, 0.92, 0.9, 0.28);
+};
+
+/** Street entrance of an underground station: stairs, a glass canopy and a sign. */
+export const subway_station: ModelFn = (g, c) => {
+  const r = c.rng;
+  const line = r.pick([0x2f6fd6, 0xd6453d, 0x2bb3a3, 0xe8873a]);
+  deck(g, 0.08, 0.08, 0.92, 0.92, 0.01, 0xcfc8ba);
+  // stairwell going down
+  deck(g, 0.32, 0.3, 0.68, 0.8, 0.013, 0x2b2d30);
+  g.noWin().color(0x3a3c40);
+  for (let k = 0; k < 4; k++) deck(g, 0.33, 0.34 + k * 0.1, 0.67, 0.38 + k * 0.1, 0.015, 0x56585c);
+  fence(g, 0.3, 0.28, 0.7, 0.8, 0.07, PAL.steelDark, 0.01, [0.33, 0.67]);
+  // glass canopy on four posts
+  g.color(PAL.steelDark);
+  for (const [px, pz] of [
+    [0.31, 0.29],
+    [0.69, 0.29],
+    [0.31, 0.79],
+    [0.69, 0.79],
+  ]) {
+    g.box(px - 0.008, 0, pz - 0.008, px + 0.008, 0.24, pz + 0.008, { noTop: true });
+  }
+  g.color(GLASS_TINT);
+  slope(g, 0.27, 0.73, 0.84, 0.23, 0.24, 0.27, 0.015);
+  // sign column with the line colour
+  g.color(PAL.steel);
+  g.cylinder(0.16, 0.2, 0.014, 0, 0.36, 6);
+  g.color(line).box(0.11, 0.33, 0.185, 0.21, 0.43, 0.215);
+  g.color(WHITE).box(0.135, 0.355, 0.214, 0.185, 0.405, 0.22);
+  bench(g, 0.84, 0.5, false);
+  bush(g, r, 0.84, 0.18);
+  bush(g, r, 0.16, 0.84);
+  lamp(g, 0.86, 0.86, 0.24);
 };

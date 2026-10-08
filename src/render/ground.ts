@@ -81,6 +81,7 @@ export function buildGround(world: World, cx: number, cy: number): GroundBuf {
       const n = world.net[world.idx(x, y)];
       if (n & NET.ROAD) roadTile(world, buf, x, y);
       if (n & NET.RAIL) railTile(world, buf, x, y);
+      if (n & NET.HIGHWAY) highwayTile(world, buf, x, y);
     }
   }
   return buf;
@@ -300,6 +301,224 @@ function railTile(world: World, buf: GroundBuf, x: number, y: number): void {
         PAL.steel,
         fixed,
       );
+    }
+  }
+}
+
+// ------------------------------------------------------------------ highways
+
+/** Height of the highway deck above the highest corner of its tile. */
+export const HIGHWAY_CLEAR = 0.7;
+/** Half width of the deck (the tile is 1 wide). */
+const HW_HALF = 0.42;
+const HW_THICK = 0.08;
+const HW_SIDE = 0xb9b4aa;
+const HW_BARRIER = 0xd8d4cc;
+const HW_PILLAR = 0xa8a296;
+const HW_DIRS: [number, number, number][] = [
+  [0, -1, DIR_N],
+  [1, 0, DIR_E],
+  [0, 1, DIR_S],
+  [-1, 0, DIR_W],
+];
+
+/** Deck top at the centre of a highway tile. */
+function hwCentre(world: World, x: number, y: number): number {
+  return Math.max(world.tileMax(x, y), world.seaLevel) * LEVEL_H + HIGHWAY_CLEAR;
+}
+
+/** Bends and junctions get a flat square in the middle; straight pieces slope across the whole tile. */
+function hwCore(mask: number): number {
+  return mask & (DIR_N | DIR_S) && mask & (DIR_E | DIR_W) ? HW_HALF : 0;
+}
+
+/** Height of the highway deck surface at world (fx, fz). */
+export function highwayY(world: World, fx: number, fz: number): number {
+  const x = Math.min(world.w - 1, Math.max(0, Math.floor(fx)));
+  const y = Math.min(world.h - 1, Math.max(0, Math.floor(fz)));
+  const c0 = hwCentre(world, x, y);
+  const mask = world.netMask(x, y, NET.HIGHWAY);
+  const ox = fx - (x + 0.5);
+  const oz = fz - (y + 0.5);
+  const ns = (mask & (DIR_N | DIR_S)) !== 0;
+  const ew = (mask & (DIR_E | DIR_W)) !== 0;
+  const horiz = ew && !ns ? true : ns && !ew ? false : Math.abs(ox) >= Math.abs(oz);
+  const along = horiz ? Math.abs(ox) : Math.abs(oz);
+  const core = hwCore(mask);
+  if (along <= core) return c0;
+  const nx = horiz ? x + Math.sign(ox) : x;
+  const ny = horiz ? y : y + Math.sign(oz);
+  if (!world.hasNet(nx, ny, NET.HIGHWAY)) return c0;
+  const e = (c0 + hwCentre(world, nx, ny)) / 2;
+  return c0 + (e - c0) * Math.min(1, (along - core) / (0.5 - core));
+}
+
+/** Quad with its front face turned toward `out`. */
+function quadOut(buf: GroundBuf, a: number[], b: number[], c: number[], d: number[], out: number[], hex: number): void {
+  const ux = b[0] - a[0];
+  const uy = b[1] - a[1];
+  const uz = b[2] - a[2];
+  const vx = c[0] - a[0];
+  const vy = c[1] - a[1];
+  const vz = c[2] - a[2];
+  const nx = uy * vz - uz * vy;
+  const ny = uz * vx - ux * vz;
+  const nz = ux * vy - uy * vx;
+  if (nx * out[0] + ny * out[1] + nz * out[2] >= 0) buf.quad(a, b, c, d, hex);
+  else buf.quad(d, c, b, a, hex);
+}
+
+/**
+ * Sloped box along a horizontal axis: from (sx, sz) at top height sy to
+ * (ex, ez) at top height ey, `hw` wide on each side, `th` thick.
+ */
+function slab(
+  buf: GroundBuf,
+  sx: number,
+  sz: number,
+  sy: number,
+  ex: number,
+  ez: number,
+  ey: number,
+  hw: number,
+  th: number,
+  top: number,
+  side: number,
+  ends = false,
+): void {
+  const len = Math.hypot(ex - sx, ez - sz) || 1;
+  const lx = (-(ez - sz) / len) * hw;
+  const lz = ((ex - sx) / len) * hw;
+  const sL = [sx - lx, sy, sz - lz];
+  const sR = [sx + lx, sy, sz + lz];
+  const eL = [ex - lx, ey, ez - lz];
+  const eR = [ex + lx, ey, ez + lz];
+  const sLb = [sL[0], sy - th, sL[2]];
+  const sRb = [sR[0], sy - th, sR[2]];
+  const eLb = [eL[0], ey - th, eL[2]];
+  const eRb = [eR[0], ey - th, eR[2]];
+  quadOut(buf, sL, sR, eR, eL, [0, 1, 0], top);
+  quadOut(buf, sRb, eRb, eR, sR, [lx, 0, lz], shade(side, 0.9));
+  quadOut(buf, eLb, sLb, sL, eL, [-lx, 0, -lz], shade(side, 0.9));
+  quadOut(buf, sLb, eLb, eRb, sRb, [0, -1, 0], shade(side, 0.7));
+  if (ends) {
+    const dx = ex - sx;
+    const dz = ez - sz;
+    quadOut(buf, eLb, eRb, eR, eL, [dx, 0, dz], shade(side, 0.82));
+    quadOut(buf, sRb, sLb, sL, sR, [-dx, 0, -dz], shade(side, 0.82));
+  }
+}
+
+/** Elevated highway deck, barriers, markings and pillars for one tile. */
+function highwayTile(world: World, buf: GroundBuf, x: number, y: number): void {
+  const mask = world.netMask(x, y, NET.HIGHWAY);
+  const c0 = hwCentre(world, x, y);
+  const cx = x + 0.5;
+  const cz = y + 0.5;
+  const core = hwCore(mask);
+  const ramp = (dx: number, dz: number) => world.buildingAt(x + dx, y + dz)?.def === 'onramp';
+  let arms = HW_DIRS.filter(([, , bit]) => mask & bit);
+  if (arms.length === 0) arms = [HW_DIRS[1], HW_DIRS[3]];
+  else if (arms.length === 1) arms = [arms[0], HW_DIRS[(HW_DIRS.indexOf(arms[0]) + 2) & 3]];
+  if (core > 0) {
+    groundBox(buf, cx - core, c0 - HW_THICK, cz - core, cx + core, c0, cz + core, HW_SIDE, PAL.asphalt);
+    // barriers on the sides of the centre square without an arm
+    for (const [dx, dz, bit] of HW_DIRS) {
+      if (mask & bit || ramp(dx, dz)) continue;
+      const ox = cx + dx * (core - 0.025);
+      const oz = cz + dz * (core - 0.025);
+      slab(
+        buf,
+        ox - dz * core,
+        oz - dx * core,
+        c0 + 0.06,
+        ox + dz * core,
+        oz + dx * core,
+        c0 + 0.06,
+        0.025,
+        0.06,
+        HW_BARRIER,
+        HW_BARRIER,
+        true,
+      );
+    }
+  }
+  for (const [dx, dz, bit] of arms) {
+    const linked = (mask & bit) !== 0;
+    const e = linked ? (c0 + hwCentre(world, x + dx, y + dz)) / 2 : c0;
+    const sx = cx + dx * core;
+    const sz = cz + dz * core;
+    const ex = cx + dx * 0.5;
+    const ez = cz + dz * 0.5;
+    slab(buf, sx, sz, c0, ex, ez, e, HW_HALF, HW_THICK, PAL.asphalt, HW_SIDE, !linked);
+    // barriers along both edges (open toward an on-ramp)
+    for (const side of [-1, 1]) {
+      const px = -dz * side;
+      const pz = dx * side;
+      if (ramp(px, pz)) continue;
+      const off = HW_HALF - 0.025;
+      slab(buf, sx + px * off, sz + pz * off, c0 + 0.06, ex + px * off, ez + pz * off, e + 0.06, 0.025, 0.06, HW_BARRIER, HW_BARRIER);
+    }
+    if (!linked)
+      slab(
+        buf,
+        ex - dx * 0.025 - dz * HW_HALF,
+        ez - dz * 0.025 - dx * HW_HALF,
+        e + 0.06,
+        ex - dx * 0.025 + dz * HW_HALF,
+        ez - dz * 0.025 + dx * HW_HALF,
+        e + 0.06,
+        0.025,
+        0.06,
+        HW_BARRIER,
+        HW_BARRIER,
+        true,
+      );
+    // markings: yellow centre line, dashed white lane lines
+    const len = 0.5 - core;
+    const at = (t: number) => [sx + dx * len * t, c0 + (e - c0) * t];
+    const mark = (t0: number, t1: number, lat: number, w: number, hex: number) => {
+      const [a, ay] = at(t0);
+      const [b, by] = at(t1);
+      const az = sz + dz * len * t0;
+      const bz = sz + dz * len * t1;
+      slab(buf, a - dz * lat, az + dx * lat, ay + 0.004, b - dz * lat, bz + dx * lat, by + 0.004, w, 0.004, hex, hex);
+    };
+    mark(0, 1, 0, 0.018, PAL.laneYellow);
+    for (const lat of [-0.21, 0.21])
+      for (const [t0, t1] of len > 0.3
+        ? [
+            [0.08, 0.38],
+            [0.6, 0.9],
+          ]
+        : [[0.1, 0.9]])
+        mark(t0, t1, lat, 0.012, PAL.laneWhite);
+  }
+  // pillars: in the middle, or at the sides when a road or rail runs along underneath
+  const n = world.net[world.idx(x, y)];
+  const ground = world.tileMin(x, y) * LEVEL_H - 0.05;
+  const ns = (mask & (DIR_N | DIR_S)) !== 0 && (mask & (DIR_E | DIR_W)) === 0;
+  const under = n & (NET.ROAD | NET.RAIL);
+  const pillar = (px: number, pz: number) => {
+    groundBox(buf, px - 0.07, ground, pz - 0.07, px + 0.07, c0 - HW_THICK, pz + 0.07, HW_PILLAR);
+    const capX = ns ? 0.26 : 0.08;
+    const capZ = ns ? 0.08 : 0.26;
+    groundBox(buf, px - capX, c0 - HW_THICK - 0.07, pz - capZ, px + capX, c0 - HW_THICK, pz + capZ, HW_PILLAR);
+  };
+  if (!under) {
+    if (core > 0 || arms.length !== 2 || !(mask & arms[0][2] && mask & arms[1][2]) || (x + y) % 2 === 0) pillar(cx, cz);
+  } else if ((x + y) % 2 === 0) {
+    const flag = n & NET.ROAD ? NET.ROAD : NET.RAIL;
+    const m = world.netMask(x, y, flag);
+    const roadNS = (m & (DIR_N | DIR_S)) !== 0 && (m & (DIR_E | DIR_W)) === 0;
+    const roadEW = (m & (DIR_E | DIR_W)) !== 0 && (m & (DIR_N | DIR_S)) === 0;
+    // a road along the highway: one pillar on each side of the road
+    if (ns && roadNS) {
+      pillar(x + 0.06, cz);
+      pillar(x + 0.94, cz);
+    } else if (!ns && core === 0 && roadEW) {
+      pillar(cx, y + 0.06);
+      pillar(cx, y + 0.94);
     }
   }
 }

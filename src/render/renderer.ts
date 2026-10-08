@@ -12,7 +12,7 @@ import { Water } from './water';
 import { Sky } from './sky';
 import { fillOverlay, fillTiles, OVERLAYS, type OverlayId } from './overlays';
 import { Particles } from './particles';
-import { Cars } from './cars';
+import { Cars, HIGHWAYS } from './cars';
 import { ICON, Icons } from './icons';
 import { Rotors } from './rotors';
 import { Preview } from './preview';
@@ -45,6 +45,7 @@ export class GameRenderer {
   preview!: Preview;
   private effects!: Effects;
   private cars!: Cars;
+  private hwyCars!: Cars;
   private trains!: Trains;
   private water!: Water;
   private skirt: THREE.Mesh | null = null;
@@ -131,9 +132,10 @@ export class GameRenderer {
       (this.water.mesh.material as THREE.Material).dispose();
       this.scene.remove(this.water.mesh);
     }
-    if (this.cars) {
-      this.cars.mesh.geometry.dispose();
-      this.scene.remove(this.cars.mesh);
+    for (const c of [this.cars, this.hwyCars]) {
+      if (!c) continue;
+      c.mesh.geometry.dispose();
+      this.scene.remove(c.mesh);
     }
     if (this.trains) {
       this.trains.dispose();
@@ -172,6 +174,8 @@ export class GameRenderer {
     this.scene.add(this.water.mesh);
     this.cars = new Cars(world);
     this.scene.add(this.cars.mesh);
+    this.hwyCars = new Cars(world, HIGHWAYS);
+    this.scene.add(this.hwyCars.mesh);
     this.trains = new Trains(world);
     this.scene.add(this.trains.group);
     this.preview = new Preview(world);
@@ -299,7 +303,7 @@ export class GameRenderer {
         c.pipes.geometry.dispose();
         this.chunkGroup.remove(c.pipes);
       }
-      const buf = buildPipes(world, cx, cy);
+      const buf = buildPipes(world, cx, cy, this.sim!.subwayLive);
       c.pipes = buf.count ? new THREE.Mesh(buf.toGeometry(), this.pipeMat) : null;
       if (c.pipes) {
         c.pipes.visible = this.underground;
@@ -339,6 +343,7 @@ export class GameRenderer {
       if (c.pipes) c.pipes.visible = on;
     }
     this.cars.mesh.visible = !on;
+    this.hwyCars.mesh.visible = !on;
     this.trains.group.visible = !on;
     this.particles.group.visible = !on;
     this.rotors.mesh.visible = !on;
@@ -476,6 +481,7 @@ export class GameRenderer {
     }
     this.particles.update(dt, running);
     this.cars.update(dt, running);
+    this.hwyCars.update(dt, running);
     this.trains.update(dt, running);
     this.rotors.update(dt, running);
     this.effects.update(dt, sim.disasters, this.particles, this.time);

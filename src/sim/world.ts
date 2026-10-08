@@ -49,6 +49,8 @@ export class World {
   trips: Float32Array;
   /** Congestion 0..1+ per road tile. */
   traffic: Float32Array;
+  /** Congestion 0..1+ per highway tile. */
+  hwyTraffic: Float32Array;
   powered: Uint8Array;
   watered: Uint8Array;
   /** Manhattan distance to the nearest road (255 = none within range). */
@@ -91,6 +93,7 @@ export class World {
     this.crime = new Float32Array(n);
     this.trips = new Float32Array(n);
     this.traffic = new Float32Array(n);
+    this.hwyTraffic = new Float32Array(n);
     this.powered = new Uint8Array(n);
     this.watered = new Uint8Array(n);
     this.roadDist = new Uint8Array(n).fill(255);

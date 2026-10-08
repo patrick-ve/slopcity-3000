@@ -1,11 +1,34 @@
 import * as THREE from 'three';
 import { NET } from '../sim/types';
 import { DIR_E, DIR_N, DIR_S, DIR_W, DX, DY, type World } from '../sim/world';
-import { LANE, roadSurfaceY } from './ground';
+import { highwayY, LANE, roadSurfaceY } from './ground';
 import { PAL } from './palette';
 
-const MAX_CARS = 1400;
 const MASK_BITS = [DIR_N, DIR_E, DIR_S, DIR_W];
+
+/** A network the cars drive on. */
+export interface CarLayer {
+  flag: number;
+  /** Congestion per tile. */
+  traffic: (w: World) => Float32Array;
+  /** Height of the driving surface. */
+  surfaceY: (w: World, x: number, z: number) => number;
+  /** Lane offsets right of the centre line (one is picked per car). */
+  lanes: number[];
+  /** Speed multiplier. */
+  speed: number;
+  max: number;
+}
+
+export const STREETS: CarLayer = { flag: NET.ROAD, traffic: (w) => w.traffic, surfaceY: roadSurfaceY, lanes: [LANE], speed: 1, max: 1400 };
+export const HIGHWAYS: CarLayer = {
+  flag: NET.HIGHWAY,
+  traffic: (w) => w.hwyTraffic,
+  surfaceY: highwayY,
+  lanes: [0.1, 0.3],
+  speed: 2.2,
+  max: 700,
+};
 
 /** Car body + cabin; vertex colours are linear (white body tinted by instance colour). */
 function carGeometry(): THREE.BufferGeometry {
@@ -39,6 +62,7 @@ function carGeometry(): THREE.BufferGeometry {
 }
 
 interface Car {
+  lane: number;
   tx: number;
   ty: number;
   din: number;
@@ -74,9 +98,13 @@ export class Cars {
   private spawnAcc = 0;
   private colors: number[] = [];
 
-  constructor(private world: World) {
-    this.mesh = new THREE.InstancedMesh(carGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), MAX_CARS);
-    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_CARS * 3), 3);
+  constructor(
+    private world: World,
+    private layer: CarLayer = STREETS,
+  ) {
+    const max = layer.max;
+    this.mesh = new THREE.InstancedMesh(carGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), max);
+    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false;
@@ -85,20 +113,21 @@ export class Cars {
 
   private rebuildTable(): void {
     const w = this.world;
+    const congestion = this.layer.traffic(w);
     this.spawnTable = [];
     this.spawnWeights = [];
     this.totalWeight = 0;
     let traffic = 0;
     for (let i = 0; i < w.size; i++) {
-      if (!(w.net[i] & NET.ROAD)) continue;
-      const t = Math.min(1.5, w.traffic[i]);
+      if (!(w.net[i] & this.layer.flag)) continue;
+      const t = Math.min(1.5, congestion[i]);
       const wt = 0.05 + t;
       this.spawnTable.push(i);
       this.totalWeight += wt;
       this.spawnWeights.push(this.totalWeight);
       traffic += t;
     }
-    this.target = Math.min(MAX_CARS, Math.round(this.spawnTable.length * 0.04 + traffic * 0.9));
+    this.target = Math.min(this.layer.max, Math.round(this.spawnTable.length * 0.04 + traffic * 0.9));
     this.tableVersion = w.roadVersion;
   }
 
@@ -115,7 +144,7 @@ export class Cars {
   }
 
   private chooseExit(tx: number, ty: number, din: number): number {
-    const mask = this.world.netMask(tx, ty, NET.ROAD);
+    const mask = this.world.netMask(tx, ty, this.layer.flag);
     const back = (din + 2) & 3;
     const opts: number[] = [];
     const weights: number[] = [];
@@ -141,10 +170,10 @@ export class Cars {
     // right of direction d is (d+1)%4
     const rIn = (di + 1) & 3;
     const rOut = (dout + 1) & 3;
-    c.ex = cxT - DX[di] * 0.5 + DX[rIn] * LANE;
-    c.ez = czT - DY[di] * 0.5 + DY[rIn] * LANE;
-    c.xx = cxT + DX[dout] * 0.5 + DX[rOut] * LANE;
-    c.xz = czT + DY[dout] * 0.5 + DY[rOut] * LANE;
+    c.ex = cxT - DX[di] * 0.5 + DX[rIn] * c.lane;
+    c.ez = czT - DY[di] * 0.5 + DY[rIn] * c.lane;
+    c.xx = cxT + DX[dout] * 0.5 + DX[rOut] * c.lane;
+    c.xz = czT + DY[dout] * 0.5 + DY[rOut] * c.lane;
     if (dout === di) {
       c.cx = (c.ex + c.xx) / 2;
       c.cz = (c.ez + c.xz) / 2;
@@ -154,19 +183,19 @@ export class Cars {
       c.cz = czT + DY[di] * 0.45;
       c.len = 1.1;
     } else {
-      c.cx = cxT + DX[rIn] * LANE + DX[rOut] * LANE;
-      c.cz = czT + DY[rIn] * LANE + DY[rOut] * LANE;
+      c.cx = cxT + DX[rIn] * c.lane + DX[rOut] * c.lane;
+      c.cz = czT + DY[rIn] * c.lane + DY[rOut] * c.lane;
       c.len = dout === rIn ? 0.55 : 0.9;
     }
   }
 
   private spawn(): void {
-    if (!this.spawnTable.length || this.cars.length >= MAX_CARS) return;
+    if (!this.spawnTable.length || this.cars.length >= this.layer.max) return;
     const i = this.pickSpawn();
     const w = this.world;
     const tx = i % w.w;
     const ty = (i / w.w) | 0;
-    const mask = w.netMask(tx, ty, NET.ROAD);
+    const mask = w.netMask(tx, ty, this.layer.flag);
     const dirs = [0, 1, 2, 3].filter((d) => mask & MASK_BITS[d]);
     if (!dirs.length) return;
     const dout = dirs[Math.floor(Math.random() * dirs.length)];
@@ -178,7 +207,8 @@ export class Cars {
       dout,
       s: Math.random(),
       len: 1,
-      speed: 0.9 + Math.random() * 0.5,
+      speed: (0.9 + Math.random() * 0.5) * this.layer.speed,
+      lane: this.layer.lanes[Math.floor(Math.random() * this.layer.lanes.length)],
       life: 12 + Math.random() * 40,
       ex: 0,
       ez: 0,
@@ -203,17 +233,18 @@ export class Cars {
           this.spawn();
         }
       }
+      const traffic = this.layer.traffic(w);
       for (let k = this.cars.length - 1; k >= 0; k--) {
         const c = this.cars[k];
         const i = w.idx(c.tx, c.ty);
-        const slow = 1 / (1 + Math.min(2, w.traffic[i]) * 0.7);
+        const slow = 1 / (1 + Math.min(2, traffic[i]) * 0.7);
         c.s += (dt * c.speed * slow) / c.len;
         while (c.s >= 1) {
           c.s -= 1;
           const nx = c.tx + DX[c.dout];
           const ny = c.ty + DY[c.dout];
           c.life -= 1;
-          if (!w.inBounds(nx, ny) || !(w.net[w.idx(nx, ny)] & NET.ROAD) || c.life <= 0) {
+          if (!w.inBounds(nx, ny) || !(w.net[w.idx(nx, ny)] & this.layer.flag) || c.life <= 0) {
             this.remove(k);
             break;
           }
@@ -223,7 +254,7 @@ export class Cars {
           c.dout = this.chooseExit(nx, ny, c.din);
           this.setupTile(c);
         }
-        if (k < this.cars.length && this.cars[k] === c && !(w.net[w.idx(c.tx, c.ty)] & NET.ROAD)) this.remove(k);
+        if (k < this.cars.length && this.cars[k] === c && !(w.net[w.idx(c.tx, c.ty)] & this.layer.flag)) this.remove(k);
       }
       if (this.cars.length > this.target * 1.2 + 5) this.cars.length = Math.floor(this.target * 1.1);
     }
@@ -249,7 +280,7 @@ export class Cars {
       const z = u * u * c.ez + 2 * u * t * c.cz + t * t * c.xz;
       const dx = 2 * u * (c.cx - c.ex) + 2 * t * (c.xx - c.cx);
       const dz = 2 * u * (c.cz - c.ez) + 2 * t * (c.xz - c.cz);
-      pos.set(x, roadSurfaceY(w, x, z) + 0.002, z);
+      pos.set(x, this.layer.surfaceY(w, x, z) + 0.002, z);
       q.setFromAxisAngle(up, Math.atan2(dx, dz));
       m4.compose(pos, q, one);
       mesh.setMatrixAt(k, m4);

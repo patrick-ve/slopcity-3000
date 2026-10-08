@@ -46,6 +46,10 @@ export interface BuildingDef {
   demand?: { r?: number; c?: number; i?: number };
   needsShore?: boolean;
   needsRail?: boolean;
+  /** Must sit in a line between a road (front) and a highway (back). */
+  needsHighway?: boolean;
+  /** Must stand on a subway line. */
+  needsSubway?: boolean;
   /** Ground tint under the footprint (sRGB hex). */
   ground?: number;
   /** Can be destroyed by fire. */
@@ -166,6 +170,16 @@ export const PLOPPABLES: BuildingDef[] = [
     id: 'train_station', name: 'Train Station', w: 2, h: 2, model: 'train_station', category: 'transport', cost: 500, upkeep: 20, year: 1900,
     dept: 'transit', service: { kind: 'transit', radius: 11, strength: 0.6 }, needsRail: true, ground: PAVED, powerUse: 3,
     desc: 'Rail commuters reduce traffic. Must be next to rail tracks.',
+  },
+  {
+    id: 'onramp', name: 'Highway On-ramp', w: 1, h: 1, model: 'onramp', category: 'transport', cost: 250, upkeep: 2, year: 1940,
+    dept: 'roads', needsHighway: true, ground: 0x8d8a85, fireproof: true,
+    desc: 'Connects a road to a highway. Place it in a line between the two.',
+  },
+  {
+    id: 'subway_station', name: 'Subway Station', w: 1, h: 1, model: 'subway_station', category: 'transport', cost: 400, upkeep: 15, year: 1910,
+    dept: 'transit', service: { kind: 'transit', radius: 9, strength: 0.75 }, needsSubway: true, ground: PAVED, powerUse: 2,
+    desc: 'Place it on a subway line. Two or more stations on one line carry commuters.',
   },
   {
     id: 'seaport', name: 'Seaport', w: 4, h: 4, model: 'seaport', category: 'transport', cost: 12000, upkeep: 90, year: 1900,
@@ -408,12 +422,19 @@ export const PLOP_CATEGORY_NAMES: Record<PlopCategory, string> = {
   rewards: 'Rewards & Deals',
 };
 
+/** First year each network type can be built (others are always available). */
+export const LINE_YEARS: Record<string, number> = { highway: 1940, subway: 1910 };
+
 /** Costs of network/zone tools (per tile). */
 export const COSTS = {
   road: 10,
   bridge: 60,
   rail: 20,
   railBridge: 80,
+  highway: 50,
+  highwayBridge: 120,
+  subway: 40,
+  subwayUnderWater: 100,
   powerLine: 5,
   pipe: 3,
   zone: [0, 5, 10, 20] as number[], // by density
@@ -429,6 +450,8 @@ export const COSTS = {
 export const MAINTENANCE = {
   road: 0.1,
   rail: 0.25,
+  highway: 0.4,
+  subway: 0.3,
   powerLine: 0.02,
   pipe: 0.01,
 } as const;

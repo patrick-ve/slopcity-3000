@@ -3,10 +3,10 @@ import { getDef, growablesFor, type BuildingDef } from './catalog';
 import type { Sim } from './sim';
 import { DIRTY_OBJECTS } from './world';
 import { ROAD_REACH } from './networks';
-import { jobAccess, MAX_COMMUTE, resAccess } from './traffic';
+import { jobAccess, MAX_COMMUTE_COST, resAccess } from './traffic';
 import { needsWater } from './util';
 
-const BLOCKING = NET.ROAD | NET.RAIL | NET.POWER;
+const BLOCKING = NET.ROAD | NET.RAIL | NET.POWER | NET.HIGHWAY;
 
 /** Demand value for a zone kind. */
 export function zoneDemand(sim: Sim, zone: number): number {
@@ -29,7 +29,7 @@ export function desirability(sim: Sim, zone: number, i: number): number {
     d += cv.parks[i] * 0.15 + cv.health[i] * 0.07 + cv.education[i] * 0.07 + cv.police[i] * 0.04;
     if (!jobAccess(sim, i)) d -= 0.35;
   } else if (zone === 2) {
-    const near = r >= 0 ? Math.max(0, 1 - sim.access.resDist[r] / MAX_COMMUTE) : 0;
+    const near = r >= 0 ? Math.max(0, 1 - sim.access.resDist[r] / MAX_COMMUTE_COST) : 0;
     d = -0.12 + lv * 0.75 + tr * 0.1 - cr * 0.55 - pol * 0.4 + near * 0.3;
     if (!resAccess(sim, i)) d -= 0.3;
   } else {
