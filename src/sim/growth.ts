@@ -275,8 +275,9 @@ export function accrueGrowthBudget(sim: Sim): void {
   const monthly = [
     0,
     Math.max(0, d.r) * (300 + s.residents * 0.065),
-    Math.max(0, d.c) * (90 + s.comJobs * 0.065),
-    Math.max(0, d.i) * (140 + s.indJobs * 0.065),
+    // shops and factories grow with the town around them, not only with their own size
+    Math.max(0, d.c) * (90 + s.residents * 0.014 + s.comJobs * 0.04),
+    Math.max(0, d.i) * (140 + s.residents * 0.016 + s.indJobs * 0.045),
   ];
   for (let z = 1; z <= 3; z++) {
     const b = sim.growthBudget[z] + monthly[z] / 30;
