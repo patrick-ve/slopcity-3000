@@ -204,6 +204,7 @@ export class Menu {
           [64, 'Small'],
           [96, 'Medium'],
           [128, 'Large'],
+          [256, 'Huge'],
         ],
         () => o.map.size,
         (v) => (o.map.size = v),
