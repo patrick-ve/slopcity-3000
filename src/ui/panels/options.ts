@@ -70,18 +70,34 @@ export class OptionsPanel implements Panel {
     b.appendChild(toggle('Day / night cycle', 'Watch the city light up at night.', st.dayNight, (v) => (st.dayNight = v)));
     b.appendChild(toggle('Show grid', 'Draw tile lines on the ground (G).', st.grid, (v) => (st.grid = v)));
     b.appendChild(h('div', { class: 'section-title' }, 'Sound'));
-    const vol = h('input', {
-      type: 'range',
-      min: 0,
-      max: 100,
-      value: String(Math.round(st.volume * 100)),
-      oninput: (e: Event) => {
-        st.volume = Number((e.target as HTMLInputElement).value) / 100;
-        g.applySettings();
-      },
-    });
-    b.appendChild(h('div', { class: 'row' }, h('span', { class: 'k', style: 'flex:0 0 90px' }, 'Volume'), vol));
-    b.appendChild(toggle('Mute', 'Silence all sound effects (M).', st.muted, (v) => (st.muted = v)));
+    const slider = (label: string, value: number, set: (v: number) => void) =>
+      h(
+        'div',
+        { class: 'row' },
+        h('span', { class: 'k', style: 'flex:0 0 112px' }, label),
+        h('input', {
+          type: 'range',
+          min: 0,
+          max: 100,
+          value: String(Math.round(value * 100)),
+          oninput: (e: Event) => {
+            set(Number((e.target as HTMLInputElement).value) / 100);
+            g.applySettings();
+          },
+        }),
+      );
+    b.appendChild(slider('Effects volume', st.volume, (v) => (st.volume = v)));
+    const song = g.music.title;
+    b.appendChild(
+      toggle(
+        'Music',
+        song ? `Smooth procedural jazz. Now playing: “${song}”.` : 'Smooth procedural jazz.',
+        st.music,
+        (v) => (st.music = v),
+      ),
+    );
+    b.appendChild(slider('Music volume', st.musicVolume, (v) => (st.musicVolume = v)));
+    b.appendChild(toggle('Mute', 'Silence all sound effects and music (M).', st.muted, (v) => (st.muted = v)));
     b.appendChild(h('div', { class: 'section-title' }, 'Gameplay'));
     b.appendChild(
       toggle('Edge scrolling', 'Move the view when the mouse touches the screen edge.', st.edgeScroll, (v) => (st.edgeScroll = v)),

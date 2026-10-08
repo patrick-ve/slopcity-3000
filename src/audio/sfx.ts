@@ -7,8 +7,8 @@ export class Sfx {
   muted = false;
   private last = new Map<string, number>();
 
-  private ensure(): AudioContext | null {
-    if (this.muted) return null;
+  /** The shared AudioContext (also used by the music), created on first use. */
+  context(): AudioContext | null {
     if (!this.ctx) {
       try {
         this.ctx = new AudioContext();
@@ -23,8 +23,14 @@ export class Sfx {
         return null;
       }
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
     return this.ctx;
+  }
+
+  private ensure(): AudioContext | null {
+    if (this.muted) return null;
+    const ctx = this.context();
+    if (ctx?.state === 'suspended') void ctx.resume();
+    return ctx;
   }
 
   setVolume(v: number): void {

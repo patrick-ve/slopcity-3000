@@ -8,6 +8,7 @@ import { randomSeed } from '../util/rng';
 import { GameRenderer, type ShadowQuality } from '../render/renderer';
 import type { OverlayId } from '../render/overlays';
 import { Sfx } from '../audio/sfx';
+import { Music } from '../audio/music';
 import { UI } from '../ui/ui';
 import { Menu, type NewGameOptions } from '../ui/menu';
 import { h } from '../util/dom';
@@ -27,6 +28,8 @@ export interface Settings {
   dayNight: boolean;
   volume: number;
   muted: boolean;
+  music: boolean;
+  musicVolume: number;
   edgeScroll: boolean;
   autosave: boolean;
   grid: boolean;
@@ -36,7 +39,17 @@ const SETTINGS_KEY = 'slopcity.settings';
 const AUTOSAVE_SECONDS = 180;
 
 function loadSettings(): Settings {
-  const defaults: Settings = { shadows: 'high', dayNight: true, volume: 0.5, muted: false, edgeScroll: false, autosave: true, grid: false };
+  const defaults: Settings = {
+    shadows: 'high',
+    dayNight: true,
+    volume: 0.5,
+    muted: false,
+    music: true,
+    musicVolume: 0.35,
+    edgeScroll: false,
+    autosave: true,
+    grid: false,
+  };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     return raw ? { ...defaults, ...(JSON.parse(raw) as Partial<Settings>) } : defaults;
@@ -55,6 +68,7 @@ export class Game {
   readonly menu: Menu;
   readonly input: Input;
   readonly sfx = new Sfx();
+  readonly music = new Music(() => this.sfx.context());
   /** Map actions that can be undone (Ctrl/Cmd + Z). */
   readonly undo = new UndoStack();
   settings: Settings = loadSettings();
@@ -75,6 +89,14 @@ export class Game {
     this.menu = new Menu(this, this.ui.root);
     this.input = new Input(this, this.renderer.canvas);
     this.applySettings();
+    // browsers only allow audio after a user gesture: start the music on the first one
+    const unlock = () => {
+      this.music.unlock();
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
     window.addEventListener('beforeunload', () => {
       if (this.mode === 'play' && this.settings.autosave) this.autosave();
     });
@@ -430,6 +452,9 @@ export class Game {
     this.renderer.setGrid(s.grid);
     this.sfx.muted = s.muted;
     this.sfx.setVolume(s.volume);
+    this.music.setVolume(s.musicVolume);
+    this.music.setEnabled(s.music);
+    this.music.setMuted(s.muted);
     this.ui?.syncToggles();
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
