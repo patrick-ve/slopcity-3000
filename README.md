@@ -1,22 +1,33 @@
 # SlopCity 3000
 
+[![CI](https://github.com/patrick-ve/slopcity-3000/actions/workflows/ci.yml/badge.svg)](https://github.com/patrick-ve/slopcity-3000/actions/workflows/ci.yml)
+
 A low-poly city builder for the browser, written in TypeScript with WebGL (Three.js).
 It is a homage to SimCity 3000: zone land, lay roads, power and water, balance the
 budget, keep your citizens happy and watch the city grow.
+
+**Play it in your browser: <https://patrick-ve.github.io/slopcity-3000/>**
 
 ## Run it
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # production build in dist/
-npm test           # simulation tests (vitest)
+npm run dev          # http://localhost:5173
+npm run build        # production build in dist/
+npm test             # simulation tests (vitest)
+npm run test:e2e     # browser smoke tests (Playwright; run "npx playwright install chromium" once)
 npm run typecheck
+npm run lint         # ESLint
+npm run format       # Prettier
+npm run check        # type check, lint, format check and unit tests
 ```
 
-A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
+A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari). Node.js 22.12 or newer is
+needed to build. Every push to `main` runs CI and deploys the game to GitHub Pages.
 
 ## How to play
+
+Start a **new city**, take over one of the **starter cities**, or try a **scenario** from the main menu.
 
 1. Build a **road** (`R`). Zones only grow within 3 tiles of a road.
 2. **Zone** residential (green) and industrial (yellow) land along it (`Z`). Add commercial (blue) later.
@@ -87,16 +98,18 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
 
 ```
 src/
-  sim/        simulation (no rendering): world grid, map generator, catalog, actions,
-              networks, traffic, fields, demand, growth, budget, garbage, disasters,
-              news, advisors, save/load
-  render/     Three.js renderer: chunked terrain/road/object meshes, materials (window and
-              zone shaders), camera, picking, water, sky, cars, trains, particles, icons,
-              previews, overlays, procedural models (render/models/*)
-  ui/         DOM interface: toolbar, HUD, windows, menu, minimap, icons
-  game/       glue: Game (main loop, modes, settings), tools, input, demo city
+  sim/        simulation (no rendering): world grid, map generator, catalog, actions, undo,
+              networks, traffic (layered commute graph), fields, demand, growth, budget,
+              garbage, disasters, news, advisors, save/load with migrations, city planner,
+              starter cities, scenarios
+  render/     Three.js renderer: chunked terrain/road/highway/object meshes, materials (window
+              and zone shaders), camera, picking, water, sky, cars, trains, particles, icons,
+              previews, overlays, procedural models (render/models/civic/*, growables/*)
+  ui/         DOM interface: toolbar, HUD, menu, minimap, icons, one file per window (ui/panels/*)
+  game/       glue: Game (main loop, modes, settings), tools, mouse/keyboard input, touch gestures
   audio/      WebAudio sound effects (synthesised, no assets)
-tests/        vitest tests for the simulation
+tests/        vitest tests for the simulation (balance, transport, undo, saves, scenarios …)
+e2e/          Playwright browser smoke tests
 viewer.html   development model viewer (/viewer.html?filter=coal_plant&variants=4)
 ```
 
