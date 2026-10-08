@@ -271,18 +271,20 @@ export class Sim {
   // ------------------------------------------------------------- finances
 
   canAfford(cost: number): boolean {
-    return cost <= 0 || this.city.funds >= cost;
+    return this.city.sandbox || cost <= 0 || this.city.funds >= cost;
   }
 
   spend(cost: number): boolean {
     if (!this.canAfford(cost)) return false;
+    // sandbox mode: money is unlimited
+    if (this.city.sandbox) return true;
     this.city.funds -= cost;
     this.events.emit('funds', this.city.funds);
     return true;
   }
 
   takeLoan(amount: number): Loan | null {
-    if (this.city.loans.length >= 5) return null;
+    if (this.city.sandbox || this.city.loans.length >= 5) return null;
     const rate = 0.05 + this.city.loans.length * 0.01;
     const months = 120;
     const mr = rate / 12;

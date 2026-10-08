@@ -581,10 +581,10 @@ export class UI {
       this.undoBtn.title = last ? `Undo: ${last.label} (Ctrl/Cmd + Z)` : 'Nothing to undo';
       const c = sim.city;
       this.cityName.textContent = c.name;
-      this.statFunds.textContent = money(c.funds);
-      this.statFunds.classList.toggle('neg', c.funds < 0);
+      this.statFunds.textContent = c.sandbox ? '∞ Sandbox' : money(c.funds);
+      this.statFunds.classList.toggle('neg', !c.sandbox && c.funds < 0);
       const rep = c.lastReport;
-      if (rep) {
+      if (rep && !c.sandbox) {
         this.statFundsDelta.textContent = `${rep.total >= 0 ? '+' : ''}${compact(rep.total)}`;
         this.statFundsDelta.className = `delta ${rep.total >= 0 ? 'up' : 'down'}`;
       } else this.statFundsDelta.textContent = '';

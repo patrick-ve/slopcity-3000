@@ -12,6 +12,8 @@ export interface NewGameOptions {
   mayor: string;
   startYear: number;
   difficulty: Difficulty;
+  /** Unlimited money and every building unlocked. */
+  sandbox?: boolean;
   map: MapOptions;
 }
 
@@ -258,14 +260,18 @@ export class Menu {
         false,
       ),
       h('label', {}, 'Difficulty'),
-      seg<Difficulty>(
+      seg<Difficulty | 'sandbox'>(
         [
           ['easy', 'Easy §50k'],
           ['medium', 'Medium §20k'],
           ['hard', 'Hard §10k'],
+          ['sandbox', 'Sandbox ∞'],
         ],
-        () => o.difficulty,
-        (v) => (o.difficulty = v),
+        () => (o.sandbox ? 'sandbox' : o.difficulty),
+        (v) => {
+          o.sandbox = v === 'sandbox';
+          o.difficulty = v === 'sandbox' ? 'easy' : v;
+        },
         false,
       ),
       h('label', {}, 'Map seed'),

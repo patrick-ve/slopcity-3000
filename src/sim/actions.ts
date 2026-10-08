@@ -188,7 +188,7 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
   let cost = 0;
   let reason: string | undefined;
   const year = LINE_YEARS[kind];
-  const tooEarly = year !== undefined && sim.year < year;
+  const tooEarly = !sim.city.sandbox && year !== undefined && sim.year < year;
   if (tooEarly) reason = `Available in ${year}`;
   for (let k = 0; k < path.length; k++) {
     const [x, y] = path[k];
@@ -297,18 +297,19 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
 // ------------------------------------------------------------- buildings
 
 export function isAvailable(sim: Sim, def: BuildingDef): { ok: boolean; why?: string } {
+  if (def.id === 'nuclear_plant' && sim.city.ordinances.nuclear_free)
+    return { ok: false, why: 'Banned by the Nuclear Free Zone ordinance' };
+  // sandbox mode: everything is unlocked, and rewards can be built more than once
+  if (sim.city.sandbox) return { ok: true };
   if (def.year && sim.year < def.year) return { ok: false, why: `Available in ${def.year}` };
   if (def.reward && !sim.city.unlocked.includes(def.id))
     return { ok: false, why: `Unlocks at ${def.reward.toLocaleString('en-US')} residents` };
-  if (def.id === 'nuclear_plant' && sim.city.ordinances.nuclear_free)
-    return { ok: false, why: 'Banned by the Nuclear Free Zone ordinance' };
   if (def.reward && def.id !== 'arcology') {
     for (const b of sim.world.buildings.values()) if (b.def === def.id) return { ok: false, why: 'Already built' };
   }
   return { ok: true };
 }
 
-/** Best rotation for a placed building: shore buildings face water, others face a road. */
 /** Front direction (dx, dy) of each building rotation. */
 const FRONT: [number, number][] = [
   [0, 1],
@@ -327,6 +328,7 @@ export function rampRotation(sim: Sim, x: number, y: number): number | null {
   return null;
 }
 
+/** Best rotation for a placed building: shore buildings face water, others face a road. */
 export function autoRotation(sim: Sim, def: BuildingDef, x: number, y: number): number {
   const w = sim.world;
   if (def.needsHighway) return rampRotation(sim, x, y) ?? 0;

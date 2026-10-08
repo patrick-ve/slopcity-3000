@@ -156,6 +156,10 @@ export class Game {
     const world = new World(o.map.size, o.map.size);
     generateMap(world, o.map);
     const sim = new Sim(world, { name: o.name, mayor: o.mayor, startYear: o.startYear, difficulty: o.difficulty, seed: o.map.seed });
+    if (o.sandbox) {
+      sim.city.sandbox = true;
+      sim.city.disastersEnabled = false;
+    }
     this.beginPlay(sim);
     this.renderer.cam.lookAt(world.w / 2, world.h / 2, Math.min(22, world.w * 0.25));
     this.renderer.cam.goalPitch = 0.66;

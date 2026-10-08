@@ -80,6 +80,7 @@ export function runMonthlyBudget(sim: Sim): void {
   const c = sim.city;
   const rep = computeBudget(sim);
   c.lastReport = rep;
+  if (c.sandbox) return;
   c.funds += rep.total;
   for (const l of c.loans) l.remaining -= Math.min(l.payment, l.remaining);
   const paid = c.loans.filter((l) => l.remaining <= 0.5);

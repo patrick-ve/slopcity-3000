@@ -29,13 +29,22 @@ export class BudgetPanel implements Panel {
       'div',
       { class: 'kv', style: 'margin-bottom:6px' },
       h('div', { class: 'k' }, 'Treasury'),
-      h('div', { class: `v ${c.funds < 0 ? 'neg' : ''}` }, money(c.funds)),
+      h('div', { class: `v ${c.funds < 0 && !c.sandbox ? 'neg' : ''}` }, c.sandbox ? '∞' : money(c.funds)),
       h('div', { class: 'k' }, 'Monthly cash flow'),
       h('div', { class: 'v', style: `color:${rep.total >= 0 ? 'var(--good)' : 'var(--bad)'}` }, signed(rep.total)),
       h('div', { class: 'k' }, 'Projected for the year'),
       h('div', { class: 'v' }, signed(rep.total * 12)),
     );
     b.appendChild(head);
+    if (c.sandbox) {
+      b.appendChild(
+        h(
+          'div',
+          { class: 'note', style: 'margin-bottom:8px' },
+          'Sandbox mode: money is unlimited. Taxes and funding still change demand and services.',
+        ),
+      );
+    }
 
     b.appendChild(h('div', { class: 'section-title' }, 'Income'));
     const taxRow = (key: 'R' | 'C' | 'I', label: string, color: string, revenue: number) => {
@@ -75,6 +84,7 @@ export class BudgetPanel implements Panel {
     if (rep.expense.deals) b.appendChild(this.line('Neighbour deals', -rep.expense.deals));
     if (rep.expense.loans) b.appendChild(this.line('Bond payments', -rep.expense.loans));
 
+    if (c.sandbox) return;
     b.appendChild(h('div', { class: 'section-title' }, 'Bonds'));
     if (!c.loans.length)
       b.appendChild(

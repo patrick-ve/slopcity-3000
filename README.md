@@ -69,6 +69,8 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
   risk, education (EQ), life expectancy, garbage, power and water capacity.
 - **Economy**: tax sliders per zone, department funding, bonds, 22 ordinances, neighbour deals,
   business deals (casino, prison, toxic dump) and rewards unlocked by population.
+- **Sandbox mode**: unlimited money, every building unlocked from the start (rewards more than once), disasters
+  off by default.
 - **Disasters**: fires that spread, tornadoes, earthquakes and meteors.
 - **Interface**: tool fly-outs with costs, data maps (13 overlays), minimap, graphs, advisors,
   query tool, news ticker, budget window, save/load (browser storage, file export/import),
