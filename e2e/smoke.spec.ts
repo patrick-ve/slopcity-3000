@@ -40,7 +40,9 @@ test('the title screen shows the menu over a live city', async ({ page }) => {
 
 test('found a city, build a road and undo it', async ({ page }) => {
   await page.getByRole('button', { name: /New city/ }).click();
+  // flat land without water, so the road below never ends in a river (the map seed is random)
   await page.getByRole('button', { name: 'Flat' }).click();
+  await page.getByRole('button', { name: 'None', exact: true }).click();
   await page.getByRole('button', { name: /Start building/ }).click();
   await expect(page.locator('.topbar')).toBeVisible();
   await page.evaluate(() => (window as unknown as { slop: Slop }).slop.setSpeed(0));
