@@ -1,13 +1,9 @@
 import { CHUNK, LEVEL_H, type World } from '../sim/world';
-import { closestParam, lengthAt } from '../sim/tracks/geom';
 import { GroundBuf } from './buffers';
-import { buildTracks, deckAt, HIGHWAY_CLEAR } from './tracks';
+import { buildTracks } from './tracks';
 import { mixHex, shade } from './geom';
 import { PAL } from './palette';
 import { hashf } from '../util/rng';
-
-/** Lane offset from the road centre line. */
-export const LANE = 0.16;
 
 export { deckY, roadSurfaceY, waterY } from './tracks';
 
@@ -80,21 +76,6 @@ function terrainTile(world: World, buf: GroundBuf, x: number, y: number): void {
     tri(p00, p01, p10, h00, h01, h10, 0);
     tri(p10, p01, p11, h10, h01, h11, 1);
   }
-}
-
-/** Height of the highway deck surface at world (fx, fz), for traffic on it. */
-export function highwayY(world: World, fx: number, fz: number): number {
-  const net = world.tracks.highway;
-  let best = Infinity;
-  let y = world.surfaceY(fx, fz) + HIGHWAY_CLEAR;
-  for (const id of net.query(fx - 1, fz - 1, fx + 1, fz + 1).edges) {
-    const [t, d] = closestParam(net.curve(net.edges.get(id)!), fx, fz);
-    if (d < best) {
-      best = d;
-      y = deckAt(world, net, id, lengthAt(net.poly(id), t));
-    }
-  }
-  return y;
 }
 
 /** Map edge "diorama" walls: soil strata under the terrain border. */

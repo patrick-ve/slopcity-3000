@@ -1,20 +1,17 @@
 import * as THREE from 'three';
-import { NET } from '../sim/types';
-import { DIR_E, DIR_N, DIR_S, DIR_W, DX, DY, LEVEL_H, type World } from '../sim/world';
-import { deckY } from './ground';
+import { LEVEL_H, type World } from '../sim/world';
+import { deckY } from './tracks';
+import { chooseExit, edgeLeg, legEnd, pose, type Leg, type Pose } from './route';
 
-const MASK_BITS = [DIR_N, DIR_E, DIR_S, DIR_W];
 const MAX_TRAINS = 14;
 const WAGONS = 3;
 const GAP = 0.34;
 const MAX_UNITS = MAX_TRAINS * (WAGONS + 1);
 
 interface Train {
-  tx: number;
-  ty: number;
-  din: number;
-  dout: number;
-  s: number;
+  leg: Leg;
+  /** Distance along the leg. */
+  d: number;
   speed: number;
   /** Recent head positions for the wagons to follow. */
   trail: { x: number; z: number; d: number }[];
@@ -49,6 +46,8 @@ function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return g;
 }
 
+const head: Pose = { x: 0, z: 0, dx: 0, dz: 0, s: 0 };
+
 /** Locomotives pulling a few wagons along the rail network. */
 export class Trains {
   readonly group = new THREE.Group();
@@ -56,7 +55,8 @@ export class Trains {
   private wagons: THREE.InstancedMesh;
   private trains: Train[] = [];
   private version = -1;
-  private railTiles: number[] = [];
+  private edges: number[] = [];
+  private railLength = 0;
   private spawnTimer = 0;
 
   constructor(private world: World) {
@@ -87,31 +87,22 @@ export class Trains {
     return w.heightAt(x, z) * LEVEL_H + 0.05;
   }
 
-  private exits(tx: number, ty: number, din: number): number {
-    const mask = this.world.netMask(tx, ty, NET.RAIL);
-    const back = (din + 2) & 3;
-    const opts = [0, 1, 2, 3].filter((d) => mask & MASK_BITS[d] && d !== back);
-    if (!opts.length) return back;
-    if (opts.includes(din) && Math.random() < 0.7) return din;
-    return opts[Math.floor(Math.random() * opts.length)];
-  }
-
   private spawn(): void {
-    const w = this.world;
-    if (this.railTiles.length < 8 || this.trains.length >= Math.min(MAX_TRAINS, Math.floor(this.railTiles.length / 30) + 1)) return;
-    const i = this.railTiles[Math.floor(Math.random() * this.railTiles.length)];
-    const tx = i % w.w;
-    const ty = (i / w.w) | 0;
-    const mask = w.netMask(tx, ty, NET.RAIL);
-    const dirs = [0, 1, 2, 3].filter((d) => mask & MASK_BITS[d]);
-    if (!dirs.length) return;
-    const d = dirs[Math.floor(Math.random() * dirs.length)];
+    const net = this.world.tracks.rail;
+    if (this.railLength < 8 || this.trains.length >= Math.min(MAX_TRAINS, Math.floor(this.railLength / 30) + 1)) return;
+    // a random spot, every length of track equally likely
+    let r = Math.random() * this.railLength;
+    let id = this.edges[0];
+    for (const e of this.edges) {
+      id = e;
+      r -= net.length(e);
+      if (r <= 0) break;
+    }
+    const e = net.edges.get(id)!;
+    const leg = edgeLeg(net, id, Math.random() < 0.5 ? e.a : e.b, false);
     this.trains.push({
-      tx,
-      ty,
-      din: d,
-      dout: d,
-      s: 0.5,
+      leg,
+      d: Math.random() * leg.len,
       speed: 1.3 + Math.random() * 0.5,
       trail: [],
       dist: 0,
@@ -119,29 +110,13 @@ export class Trains {
     });
   }
 
-  private headPos(t: Train): [number, number, number, number] {
-    const cx = t.tx + 0.5;
-    const cz = t.ty + 0.5;
-    const ex = cx - DX[t.din] * 0.5;
-    const ez = cz - DY[t.din] * 0.5;
-    const xx = cx + DX[t.dout] * 0.5;
-    const xz = cz + DY[t.dout] * 0.5;
-    const s = t.s;
-    const u = 1 - s;
-    const x = u * u * ex + 2 * u * s * cx + s * s * xx;
-    const z = u * u * ez + 2 * u * s * cz + s * s * xz;
-    const dx = 2 * u * (cx - ex) + 2 * s * (xx - cx);
-    const dz = 2 * u * (cz - ez) + 2 * s * (xz - cz);
-    return [x, z, dx, dz];
-  }
-
   update(dt: number, running: boolean): void {
-    const w = this.world;
-    if (this.version !== w.roadVersion + w.buildVersion) {
-      this.version = w.roadVersion + w.buildVersion;
-      this.railTiles = [];
-      for (let i = 0; i < w.size; i++) if (w.net[i] & NET.RAIL) this.railTiles.push(i);
-      this.trains = this.trains.filter((t) => w.hasNet(t.tx, t.ty, NET.RAIL));
+    const net = this.world.tracks.rail;
+    if (this.version !== net.version) {
+      this.version = net.version;
+      this.edges = [...net.edges.keys()];
+      this.railLength = this.edges.reduce((sum, e) => sum + net.length(e), 0);
+      this.trains = this.trains.filter((t) => net.edges.has(t.leg.edge));
     }
     if (running) {
       this.spawnTimer -= dt;
@@ -149,29 +124,21 @@ export class Trains {
         this.spawnTimer = 3;
         this.spawn();
       }
-      for (let k = this.trains.length - 1; k >= 0; k--) {
-        const t = this.trains[k];
+      for (const t of this.trains) {
         const step = dt * t.speed;
-        t.s += step;
+        t.d += step;
         t.dist += step;
-        while (t.s >= 1) {
-          t.s -= 1;
-          const nx = t.tx + DX[t.dout];
-          const ny = t.ty + DY[t.dout];
-          if (!w.hasNet(nx, ny, NET.RAIL)) {
-            // end of the line: reverse
-            t.din = (t.dout + 2) & 3;
-            t.dout = this.exits(t.tx, t.ty, t.din);
-            t.trail = [];
-            continue;
-          }
-          t.tx = nx;
-          t.ty = ny;
-          t.din = t.dout;
-          t.dout = this.exits(nx, ny, t.din);
+        for (let guard = 0; t.d >= t.leg.len && guard < 6; guard++) {
+          t.d -= t.leg.len;
+          const node = legEnd(net, t.leg);
+          pose(t.leg, t.leg.len, 0, head);
+          // switches only turn gently; at the end of the line the train reverses
+          const exit = chooseExit(net, node, t.leg.edge, head.dx, head.dz, 2.5, 0.3);
+          if (exit === t.leg.edge) t.trail = [];
+          t.leg = edgeLeg(net, exit, node, false);
         }
-        const [x, z] = this.headPos(t);
-        t.trail.push({ x, z, d: t.dist });
+        pose(t.leg, t.d, 0, head);
+        t.trail.push({ x: head.x, z: head.z, d: t.dist });
         while (t.trail.length > 2 && t.trail[1].d < t.dist - (WAGONS + 1) * GAP - 0.5) t.trail.shift();
       }
     }
@@ -204,9 +171,9 @@ export class Trains {
     let wi = 0;
     for (let k = 0; k < this.trains.length; k++) {
       const t = this.trains[k];
-      const [x, z, dx, dz] = this.headPos(t);
-      p.set(x, this.railY(x, z), z);
-      q.setFromAxisAngle(up, Math.atan2(dx, dz));
+      pose(t.leg, t.d, 0, head);
+      p.set(head.x, this.railY(head.x, head.z), head.z);
+      q.setFromAxisAngle(up, Math.atan2(head.dx, head.dz));
       m4.compose(p, q, one);
       this.locos.setMatrixAt(k, m4);
       this.locos.setColorAt(k, c.setHex(t.colour));
