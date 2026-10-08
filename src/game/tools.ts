@@ -246,12 +246,17 @@ export class ToolController {
 
   cancel(): void {
     if (this.drag) {
-      this.drag = null;
-      this.lastKey = '';
-      this.refresh();
+      this.abort();
     } else if (this.tool.kind !== 'query') {
       this.setTool(QUERY_TOOL);
     }
+  }
+
+  /** Drop an unfinished drag without applying it (keeps the current tool). */
+  abort(): void {
+    this.drag = null;
+    this.lastKey = '';
+    this.refresh();
   }
 
   get isDragTool(): boolean {

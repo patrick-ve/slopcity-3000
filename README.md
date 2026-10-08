@@ -30,21 +30,25 @@ A WebGL 2 browser is required (any recent Chrome, Edge, Firefox or Safari).
 
 ### Controls
 
-| Input                            | Action                                           |
-| -------------------------------- | ------------------------------------------------ |
-| Left drag                        | Use the current tool (zones, roads, bulldoze, …) |
-| Right drag                       | Pan                                              |
-| Middle drag (or Alt + left drag) | Rotate and tilt                                  |
-| Wheel                            | Zoom (toward the cursor)                         |
-| `W` `A` `S` `D` / arrows         | Pan                                              |
-| `Q` / `E`                        | Rotate the view 90°                              |
-| `Shift` while dragging           | Bend lines the other way                         |
-| `X` / `Tab`                      | Rotate the building you are placing              |
-| `Space`, `1` `2` `3`             | Pause, Turtle, Llama, Cheetah                    |
-| `B` `R` `P` `U` `Z`              | Bulldoze, road, power line, pipe, zones menu     |
-| `G` / `M` / `H`                  | Grid, mute, help                                 |
-| `Esc`                            | Close window / cancel / query tool               |
-| `Ctrl`+`S`                       | Quick save                                       |
+| Input                                       | Action                                                         |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| Left drag                                   | Use the current tool (zones, roads, bulldoze, …)               |
+| Right drag                                  | Pan                                                            |
+| Middle drag, or `Option`/`Alt` + left drag  | Rotate and tilt (also on the title screen)                     |
+| Wheel / trackpad pinch                      | Zoom (toward the cursor)                                       |
+| `Shift` + wheel / two-finger sideways swipe | Rotate                                                         |
+| Touch: one finger                           | Use the current tool (query tool: drag to pan, tap to inspect) |
+| Touch: two fingers                          | Pan, pinch to zoom, twist to rotate                            |
+| Touch: three fingers                        | Drag up or down to tilt                                        |
+| `W` `A` `S` `D` / arrows                    | Pan                                                            |
+| `Q` / `E`                                   | Rotate the view 90°                                            |
+| `Shift` while dragging                      | Bend lines the other way                                       |
+| `X` / `Tab`                                 | Rotate the building you are placing                            |
+| `Space`, `1` `2` `3`                        | Pause, Turtle, Llama, Cheetah                                  |
+| `B` `R` `P` `U` `Z`                         | Bulldoze, road, power line, pipe, zones menu                   |
+| `G` / `M` / `H`                             | Grid, mute, help                                               |
+| `Esc`                                       | Close window / cancel / query tool                             |
+| `Ctrl`/`Cmd` + `S`                          | Quick save                                                     |
 
 ## Features
 

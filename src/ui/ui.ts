@@ -100,10 +100,13 @@ export class UI {
       news: new NewsPanel(game, host),
       query: this.query,
     };
-    window.addEventListener('pointermove', (e) => {
+    const track = (e: PointerEvent) => {
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
-    });
+    };
+    // pointerdown too: a tap on a touch screen has no move before it
+    window.addEventListener('pointermove', track);
+    window.addEventListener('pointerdown', track);
     window.addEventListener('resize', () => this.onResize());
     this.applyScale();
   }

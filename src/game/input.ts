@@ -1,6 +1,7 @@
 import type { Game } from './game';
 import { QUERY_TOOL, findTool } from './tools';
 import type { Speed } from '../sim/types';
+import { TouchGestures } from './touch';
 
 const PAN_KEYS: Record<string, [number, number]> = {
   KeyW: [0, 1],
@@ -13,7 +14,7 @@ const PAN_KEYS: Record<string, [number, number]> = {
   ArrowRight: [1, 0],
 };
 
-/** Mouse + keyboard handling for the 3D view. */
+/** Mouse, keyboard and touch handling for the 3D view. */
 export class Input {
   pointerOverUI = true;
   private held = new Set<string>();
@@ -21,16 +22,26 @@ export class Input {
   private orbit: { x: number; y: number } | null = null;
   private leftDown = false;
   private lastMove = { x: 0, y: 0 };
+  private touch: TouchGestures;
 
   constructor(
     private game: Game,
     private canvas: HTMLCanvasElement,
   ) {
+    this.touch = new TouchGestures(
+      game,
+      canvas,
+      (dx, dy) => this.panScreen(dx, dy),
+      (f, sx, sy) => this.zoomAt(f, sx, sy),
+    );
     canvas.addEventListener('pointerdown', (e) => this.down(e));
     canvas.addEventListener('pointermove', (e) => this.move(e));
     canvas.addEventListener('pointerup', (e) => this.up(e));
+    canvas.addEventListener('pointercancel', (e) => this.cancelPointer(e));
     canvas.addEventListener('pointerenter', () => (this.pointerOverUI = false));
-    canvas.addEventListener('pointerleave', () => {
+    canvas.addEventListener('pointerleave', (e) => {
+      // touch pointers "leave" after every lift; the touch handler hides the preview itself
+      if (e.pointerType === 'touch') return;
       this.pointerOverUI = true;
       if (!this.leftDown) this.game.tools.move(null, false);
     });
@@ -46,17 +57,18 @@ export class Input {
   }
 
   private down(e: PointerEvent): void {
+    if (e.pointerType === 'touch') {
+      this.touch.down(e);
+      return;
+    }
     this.canvas.setPointerCapture(e.pointerId);
     if (e.button === 2) {
       this.pan = { x: e.clientX, y: e.clientY, moved: false };
-    } else if (e.button === 1) {
+    } else if (e.button === 1 || (e.button === 0 && e.altKey)) {
+      // middle drag, or Option/Alt + left drag for mice and trackpads without a middle button
       e.preventDefault();
       this.orbit = { x: e.clientX, y: e.clientY };
     } else if (e.button === 0 && this.playing) {
-      if (e.altKey) {
-        this.orbit = { x: e.clientX, y: e.clientY };
-        return;
-      }
       this.leftDown = true;
       this.game.ui.closeFlyout();
       this.game.tools.down(this.game.renderer.pick(e.clientX, e.clientY));
@@ -64,6 +76,10 @@ export class Input {
   }
 
   private move(e: PointerEvent): void {
+    if (e.pointerType === 'touch') {
+      this.touch.move(e);
+      return;
+    }
     this.lastMove.x = e.clientX;
     this.lastMove.y = e.clientY;
     const cam = this.game.renderer.cam;
@@ -71,9 +87,7 @@ export class Input {
       const dx = e.clientX - this.pan.x;
       const dy = e.clientY - this.pan.y;
       if (Math.abs(dx) + Math.abs(dy) > 2) this.pan.moved = true;
-      const upp = cam.unitsPerPixel(this.canvas.clientHeight);
-      cam.pan(-dx * upp, (dy * upp) / Math.sin(cam.pitch));
-      cam.target.copy(cam.goalTarget);
+      this.panScreen(dx, dy);
       this.pan.x = e.clientX;
       this.pan.y = e.clientY;
     }
@@ -89,6 +103,10 @@ export class Input {
   }
 
   private up(e: PointerEvent): void {
+    if (e.pointerType === 'touch') {
+      this.touch.up(e, false);
+      return;
+    }
     if (e.button === 2) {
       if (this.pan && !this.pan.moved && this.playing) this.game.tools.cancel();
       this.pan = null;
@@ -100,14 +118,49 @@ export class Input {
     }
   }
 
+  /** A lost pointer (system gesture, window switch): drop what it was doing. */
+  private cancelPointer(e: PointerEvent): void {
+    if (e.pointerType === 'touch') {
+      this.touch.up(e, true);
+      return;
+    }
+    this.pan = null;
+    this.orbit = null;
+    if (this.leftDown) {
+      this.leftDown = false;
+      this.game.tools.abort();
+    }
+  }
+
   private wheel(e: WheelEvent): void {
     e.preventDefault();
+    const unit = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 600 : 1;
+    const dx = e.deltaX * unit;
+    const dy = e.deltaY * unit;
+    // a sideways two-finger swipe (or Shift + wheel) turns the view; a trackpad pinch arrives as Ctrl + wheel
+    if (!e.ctrlKey && Math.abs(dx) > Math.abs(dy)) {
+      this.game.renderer.cam.rotate(dx * 0.004);
+      return;
+    }
+    const factor = e.ctrlKey ? Math.pow(1.01, Math.max(-25, Math.min(25, dy))) : Math.pow(1.0015, dy);
+    this.zoomAt(factor, e.clientX, e.clientY);
+  }
+
+  /** Pan the view by a screen-space drag (pixels). */
+  private panScreen(dx: number, dy: number): void {
     const cam = this.game.renderer.cam;
-    const factor = Math.pow(1.0015, e.deltaY * (e.deltaMode === 1 ? 30 : 1));
+    const upp = cam.unitsPerPixel(this.canvas.clientHeight);
+    cam.pan(-dx * upp, (dy * upp) / Math.sin(cam.pitch));
+    cam.target.copy(cam.goalTarget);
+  }
+
+  /** Zoom by a factor, keeping the ground point under (sx, sy) in place. */
+  private zoomAt(factor: number, sx: number, sy: number): void {
+    const cam = this.game.renderer.cam;
     const before = cam.goalZoom;
     cam.zoomBy(factor);
     const f = cam.goalZoom / before;
-    const hit = this.game.renderer.pick(e.clientX, e.clientY);
+    const hit = this.game.renderer.pick(sx, sy);
     if (hit && f !== 1) {
       cam.goalTarget.x = hit.x + (cam.goalTarget.x - hit.x) * f;
       cam.goalTarget.z = hit.z + (cam.goalTarget.z - hit.z) * f;

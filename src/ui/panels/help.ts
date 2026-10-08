@@ -28,23 +28,41 @@ export class HelpPanel implements Panel {
     b.appendChild(
       h('ol', { class: 'note', style: 'padding-left:18px;margin:0' }, ...steps.map((s) => h('li', { style: 'margin:3px 0' }, s))),
     );
-    b.appendChild(h('div', { class: 'section-title' }, 'Controls'));
-    const keys: [string, string][] = [
+    const grid = (title: string, rows: [string, string][]) => {
+      b.appendChild(h('div', { class: 'section-title' }, title));
+      b.appendChild(h('div', { class: 'help-grid' }, ...rows.flatMap(([k, v]) => [h('span', { class: 'kbd' }, k), h('span', {}, v)])));
+    };
+    grid('Mouse', [
       ['Left drag', 'Use the current tool (zones, roads, bulldoze …)'],
       ['Right drag', 'Pan the view'],
       ['Middle drag', 'Rotate and tilt the view'],
+      ['Option/Alt + left drag', 'Rotate and tilt (no middle button needed)'],
       ['Wheel', 'Zoom in and out'],
+      ['Shift + wheel', 'Rotate the view'],
+    ]);
+    grid('Trackpad', [
+      ['Two-finger swipe up/down', 'Zoom in and out'],
+      ['Two-finger swipe sideways', 'Rotate the view'],
+      ['Pinch', 'Zoom in and out'],
+      ['Option/Alt + drag', 'Rotate and tilt the view'],
+    ]);
+    grid('Touch screen', [
+      ['One finger', 'Use the current tool. With the query tool: drag to pan, tap to inspect.'],
+      ['Two fingers', 'Drag to pan, pinch to zoom, twist to rotate'],
+      ['Three fingers', 'Drag up or down to tilt the view'],
+    ]);
+    grid('Keyboard', [
       ['W A S D / arrows', 'Pan'],
       ['Q / E', 'Rotate the view 90°'],
+      ['+ / −', 'Zoom in and out'],
       ['Shift (while dragging)', 'Bend lines the other way'],
-      ['X', 'Rotate the building you are placing'],
+      ['X / Tab', 'Rotate the building you are placing'],
       ['Space', 'Pause / resume'],
       ['1 2 3', 'Turtle, Llama, Cheetah speed'],
       ['B R P U Z', 'Bulldoze, roads, power, pipes, zones'],
-      ['G', 'Toggle grid'],
+      ['G / M / H', 'Grid, mute, help'],
       ['Esc', 'Cancel / query tool'],
-      ['Ctrl+S', 'Quick save'],
-    ];
-    b.appendChild(h('div', { class: 'help-grid' }, ...keys.flatMap(([k, v]) => [h('span', { class: 'kbd' }, k), h('span', {}, v)])));
+      ['Ctrl/Cmd + S', 'Quick save'],
+    ]);
   }
 }
