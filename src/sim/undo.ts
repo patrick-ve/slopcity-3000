@@ -1,13 +1,16 @@
 /**
  * Undo for map actions (zoning, networks, buildings, bulldozing, trees and
  * terraforming). Before a plan is applied, the tiles it changes are recorded:
- * their layers, the terrain corners and the buildings on them. Undo puts them
- * back, removes anything built on those tiles since, and refunds the cost.
+ * their layers, the terrain corners and the buildings on them. While it is
+ * applied, the changes to the track networks (roads, rails, highways) are
+ * recorded too. Undo puts it all back, removes anything built on those tiles
+ * since, and refunds the cost.
  */
 import type { Building } from './types';
 import { applyPlan, type Plan } from './actions';
 import type { Sim } from './sim';
 import { DIRTY_ALL } from './world';
+import { TRACK_KINDS, type TrackKind, type TrackLog } from './tracks/net';
 
 export interface UndoEntry {
   /** What was done, for messages ("Road", "Bulldoze", …). */
@@ -28,6 +31,8 @@ export interface UndoEntry {
   corners: [number, number][];
   /** Copies of the buildings that stood on the recorded tiles. */
   buildings: Building[];
+  /** Changes to the track networks. */
+  tracks: { kind: TrackKind; log: TrackLog }[];
 }
 
 /** Record everything a plan is about to change. */
@@ -79,6 +84,7 @@ export function captureUndo(sim: Sim, plan: Plan, label: string): UndoEntry {
     landfill: pick(w.landfill, new Float32Array(n)),
     corners,
     buildings: [...buildings.values()],
+    tracks: [],
   };
 }
 
@@ -118,6 +124,8 @@ export function restoreUndo(sim: Sim, e: UndoEntry): void {
     const y = (i / w.w) | 0;
     w.markArea(x, y, x, y, DIRTY_ALL);
   });
+  for (const { kind, log } of e.tracks) w.tracks[kind].revert(log);
+  w.syncTracks();
   if (e.corners.length) {
     const W = w.w + 1;
     for (const [k, v] of e.corners) {
@@ -164,7 +172,18 @@ export class UndoStack {
     if (!plan.ok) return false;
     const entry = captureUndo(sim, plan, label);
     const before = sim.city.funds;
-    if (!applyPlan(plan)) return false;
+    const nets = TRACK_KINDS.map((kind) => ({ kind, net: sim.world.tracks[kind] }));
+    for (const { net } of nets) net.begin();
+    let applied: boolean;
+    try {
+      applied = applyPlan(plan);
+    } finally {
+      for (const { kind, net } of nets) {
+        const log = net.commit();
+        if (log.ops.length) entry.tracks.push({ kind, log });
+      }
+    }
+    if (!applied) return false;
     entry.refund = Math.max(0, before - sim.city.funds);
     this.entries.push(entry);
     if (this.entries.length > this.limit) this.entries.shift();

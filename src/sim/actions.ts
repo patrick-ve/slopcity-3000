@@ -7,6 +7,8 @@ import { COSTS, getDef, LINE_YEARS, type BuildingDef } from './catalog';
 import type { Sim } from './sim';
 import { DIRTY_GROUND, DIRTY_OBJECTS, DIRTY_PIPES, MAX_LEVEL } from './world';
 import { faceRoad } from './growth';
+import { finishPlan, type Plan, type PlanTile } from './plan';
+import { planTrack, trackCut } from './tracks/plan';
 
 export type LineKind = 'road' | 'rail' | 'power' | 'pipe' | 'highway' | 'subway';
 
@@ -27,42 +29,9 @@ export const UNDERGROUND_NET = NET.PIPE | NET.SUBWAY;
 /** Networks that pin the terrain corners under them. */
 const FIXED_NET = NET.ROAD | NET.RAIL | NET.HIGHWAY;
 
-export interface PlanTile {
-  x: number;
-  y: number;
-  ok: boolean;
-  /** Tile will change (costs money). */
-  change: boolean;
-}
+export type { Plan, PlanTile } from './plan';
 
-export interface Plan {
-  kind: string;
-  tiles: PlanTile[];
-  cost: number;
-  ok: boolean;
-  reason?: string;
-  apply: () => void;
-  /** Terrain corner indices the plan changes (terraforming). */
-  corners?: number[];
-  /** For building placement. */
-  def?: BuildingDef;
-  x?: number;
-  y?: number;
-  rot?: number;
-  /** Footprint (rotated). */
-  w?: number;
-  h?: number;
-}
-
-function finish(sim: Sim, kind: string, tiles: PlanTile[], cost: number, apply: () => void, reason?: string): Plan {
-  const anyChange = tiles.some((t) => t.change && t.ok);
-  let ok = anyChange && !reason;
-  if (ok && !sim.canAfford(cost)) {
-    ok = false;
-    reason = 'Not enough money';
-  }
-  return { kind, tiles, cost, ok, reason: ok ? undefined : (reason ?? (anyChange ? undefined : 'Nothing to do here')), apply };
-}
+const finish = finishPlan;
 
 function rectTiles(x0: number, y0: number, x1: number, y1: number): [number, number][] {
   const out: [number, number][] = [];
@@ -158,30 +127,9 @@ export function planDezone(sim: Sim, x0: number, y0: number, x1: number, y1: num
 
 // --------------------------------------------------------------- networks
 
-function axisAt(path: [number, number][], k: number): 'x' | 'y' | 'both' {
-  const [x, y] = path[k];
-  const dirs = new Set<string>();
-  for (const j of [k - 1, k + 1]) {
-    if (j < 0 || j >= path.length) continue;
-    dirs.add(path[j][0] !== x ? 'x' : path[j][1] !== y ? 'y' : '');
-  }
-  dirs.delete('');
-  if (dirs.size === 1) return [...dirs][0] as 'x' | 'y';
-  return 'both';
-}
-
-/** Axis of an existing straight network piece, or null if not straight. */
-function straightAxis(sim: Sim, x: number, y: number, flag: number): 'x' | 'y' | null {
-  const w = sim.world;
-  const ew = w.hasNet(x - 1, y, flag) || w.hasNet(x + 1, y, flag);
-  const ns = w.hasNet(x, y - 1, flag) || w.hasNet(x, y + 1, flag);
-  if (ew && !ns) return 'x';
-  if (ns && !ew) return 'y';
-  if (!ew && !ns) return null;
-  return null;
-}
-
 export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Plan {
+  // roads, rails and highways are track networks (they may also run at any angle, see tracks/plan.ts)
+  if (kind === 'road' || kind === 'rail' || kind === 'highway') return planTrack(sim, kind, { type: 'grid', path });
   const w = sim.world;
   const flag = LINE_FLAGS[kind];
   const tiles: PlanTile[] = [];
@@ -190,8 +138,7 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
   const year = LINE_YEARS[kind];
   const tooEarly = !sim.city.sandbox && year !== undefined && sim.year < year;
   if (tooEarly) reason = `Available in ${year}`;
-  for (let k = 0; k < path.length; k++) {
-    const [x, y] = path[k];
+  for (const [x, y] of path) {
     if (!w.inBounds(x, y)) continue;
     const i = w.idx(x, y);
     const water = w.isWater(x, y);
@@ -204,64 +151,16 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
       tileCost = COSTS.pipe;
     } else if (kind === 'subway') {
       tileCost = water ? COSTS.subwayUnderWater : COSTS.subway;
-    } else if (kind === 'highway') {
-      // elevated: crosses roads, rails, slopes and water, but not buildings
-      if (b) {
-        ok = false;
-        reason ??= 'Blocked by a building';
-      }
-      tileCost = water ? COSTS.highwayBridge : COSTS.highway;
-    } else if (kind === 'power') {
+    } else {
+      // power line
       ok = !b;
       tileCost = water ? COSTS.powerLine * 2 : COSTS.powerLine;
       if (b) reason ??= 'Buildings conduct power already';
-    } else {
-      // road / rail
-      if (b) {
-        ok = false;
-        reason ??= 'Blocked by a building';
-      }
-      if (w.tileMax(x, y) - w.tileMin(x, y) > 2) {
-        ok = false;
-        reason ??= 'Too steep';
-      }
-      const other = kind === 'road' ? NET.RAIL : NET.ROAD;
-      const axis = axisAt(path, k);
-      if (w.net[i] & other) {
-        const oa = straightAxis(sim, x, y, other);
-        if (!oa || axis === 'both' || axis === oa) {
-          ok = false;
-          reason ??= 'Crossings must be straight and perpendicular';
-        }
-      }
-      if (water) {
-        if (axis === 'both' || w.tileMin(x, y) < w.seaLevel - 3) {
-          ok = false;
-          reason ??= 'Bridges must be straight';
-        }
-        tileCost = kind === 'road' ? COSTS.bridge : COSTS.railBridge;
-      } else {
-        tileCost = kind === 'road' ? COSTS.road : COSTS.rail;
-      }
     }
     if (tooEarly) ok = false;
     const change = ok && !has;
     if (change) cost += tileCost;
     tiles.push({ x, y, ok, change });
-  }
-  if (kind === 'road' || kind === 'rail' || kind === 'highway') {
-    // a bridge must not end on water: the first/last path tile must be land unless connecting to existing network
-    const first = path[0];
-    const last = path[path.length - 1];
-    for (const [x, y] of [first, last]) {
-      if (w.inBounds(x, y) && w.isWater(x, y) && !w.hasNet(x, y, flag)) {
-        const t = tiles.find((tt) => tt.x === x && tt.y === y);
-        if (t) {
-          t.ok = false;
-          reason ??= 'Bridges must end on land';
-        }
-      }
-    }
   }
   return finish(
     sim,
@@ -283,9 +182,8 @@ export function planLine(sim: Sim, kind: LineKind, path: [number, number][]): Pl
         w.markArea(t.x, t.y, t.x, t.y, underground ? DIRTY_PIPES : DIRTY_GROUND | DIRTY_OBJECTS);
       }
       w.tilesDirty = true;
-      // the commute graph uses roads, highways and subways
-      if (kind === 'road' || kind === 'highway' || kind === 'subway') sim.dirty.roads = true;
-      if (kind === 'road' || kind === 'rail' || kind === 'highway') w.roadVersion++;
+      // the commute graph uses subways too
+      if (kind === 'subway') sim.dirty.roads = true;
       sim.dirty.power = true;
       sim.dirty.water = true;
       sim.events.emit('sound', 'build');
@@ -516,6 +414,12 @@ export function planBulldoze(sim: Sim, x0: number, y0: number, x1: number, y1: n
     }
     tiles.push({ x, y, ok: true, change });
   }
+  // roads, rails and highways are cut out of the rectangle; their new dead ends may free tiles beside it
+  const cut = underground ? null : trackCut(sim, x0, y0, x1, y1);
+  if (cut) {
+    const inRect = new Set(tiles.map((t) => w.idx(t.x, t.y)));
+    for (const i of cut.freed) if (!inRect.has(i)) tiles.push({ x: i % w.w, y: (i / w.w) | 0, ok: true, change: true });
+  }
   return finish(sim, 'bulldoze', tiles, cost, () => {
     if (!sim.spend(cost)) return;
     let roads = false;
@@ -536,11 +440,13 @@ export function planBulldoze(sim: Sim, x0: number, y0: number, x1: number, y1: n
         continue;
       }
       if (w.net[i] & FIXED_NET) roads = true;
-      w.net[i] &= UNDERGROUND_NET;
+      w.net[i] &= ~NET.POWER;
       w.tree[i] = 0;
       w.rubble[i] = 0;
       w.markArea(t.x, t.y, t.x, t.y, DIRTY_GROUND | DIRTY_OBJECTS);
     }
+    // track bits follow the networks
+    cut?.apply();
     w.tilesDirty = true;
     if (roads) {
       sim.dirty.roads = true;

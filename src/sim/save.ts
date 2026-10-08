@@ -2,9 +2,11 @@ import { World } from './world';
 import { Sim, type CityState } from './sim';
 import type { Building } from './types';
 import { DEFS } from './catalog';
+import { TRACK_KINDS, type TrackData, type TrackKind } from './tracks/net';
+import { importTiles } from './tracks/edit';
 
 /** Current save format. Bump it (and add a migration) whenever the format changes. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 interface SaveFile {
   version: number;
@@ -18,6 +20,8 @@ interface SaveFile {
   nextId: number;
   city: CityState;
   rng: number;
+  /** Roads, rails and highways as curves (version 4). Older files only have their tiles. */
+  tracks?: Record<TrackKind, TrackData>;
 }
 
 function b64(bytes: Uint8Array): string {
@@ -109,6 +113,7 @@ export function serialize(sim: Sim): string {
     nextId: w.nextId,
     city: sim.city,
     rng: sim.rng.state,
+    tracks: { road: w.tracks.road.toData(), rail: w.tracks.rail.toData(), highway: w.tracks.highway.toData() },
   };
   return JSON.stringify(file);
 }
@@ -129,6 +134,8 @@ const MIGRATIONS: Record<number, (file: OldSave) => void> = {
   },
   // v3: map layers may be run-length encoded ("rle:" prefix); plain base64 layers stay valid
   2: () => {},
+  // v4: roads, rails and highways are saved as curves; older files rebuild them from their tiles when loaded
+  3: () => {},
 };
 
 /** Bring a parsed save file up to SAVE_VERSION. */
@@ -158,6 +165,16 @@ export function deserialize(json: string): Sim {
   w.tree.set(unpackLayer(file.layers.tree, n));
   w.rubble.set(unpackLayer(file.layers.rubble, n));
   w.landfill.set(new Float32Array(unpackLayer(file.layers.landfill, n * 4).buffer));
+  // track tiles follow the track networks
+  for (const kind of TRACK_KINDS) {
+    const net = w.tracks[kind];
+    const data = file.tracks?.[kind];
+    if (data) net.load(data);
+    else importTiles(net, w.net);
+    const flag = net.profile.flag;
+    for (let i = 0; i < n; i++) w.net[i] &= ~flag;
+  }
+  w.syncTracks();
   for (const row of file.buildings) {
     const b = {} as Record<string, unknown>;
     BUILDING_KEYS.forEach((k, i) => (b[k] = row[i]));

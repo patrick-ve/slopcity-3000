@@ -1,5 +1,6 @@
 import { NET, SERVICE_KINDS, type Building, type ServiceKind, type ZoneKind } from './types';
 import { getDef, type BuildingDef } from './catalog';
+import { TRACK_KINDS, TrackNet, type TrackKind } from './tracks/net';
 
 /** World height of one terrain level (tile size is 1). */
 export const LEVEL_H = 0.25;
@@ -63,6 +64,8 @@ export class World {
 
   buildings = new Map<number, Building>();
   nextId = 1;
+  /** Roads, rails and highways as curves; their NET bits follow the tiles they cover (see syncTracks). */
+  readonly tracks: Record<TrackKind, TrackNet>;
 
   // ---- change tracking for the renderer
   readonly chunksX: number;
@@ -104,6 +107,7 @@ export class World {
     for (const k of SERVICE_KINDS) this.cover[k] = new Float32Array(n);
     this.chunksX = Math.ceil(w / CHUNK);
     this.chunksY = Math.ceil(h / CHUNK);
+    this.tracks = { road: new TrackNet('road', w, h), rail: new TrackNet('rail', w, h), highway: new TrackNet('highway', w, h) };
   }
 
   // ------------------------------------------------------------- indexing
@@ -237,6 +241,44 @@ export class World {
 
   isRoad(i: number): boolean {
     return (this.net[i] & NET.ROAD) !== 0;
+  }
+
+  /**
+   * Bring the NET bits of roads, rails and highways in line with the tiles
+   * their track covers, clear what new track runs over (zones, trees, rubble)
+   * and mark the changed chunks for redrawing. Returns true if anything changed.
+   */
+  syncTracks(): boolean {
+    let changed = false;
+    for (const kind of TRACK_KINDS) {
+      const net = this.tracks[kind];
+      if (!net.flips.size && !net.touched.size) continue;
+      changed = true;
+      const flag = net.profile.flag;
+      for (const i of net.flips) {
+        if (net.cover[i] > 0) {
+          if (this.net[i] & flag) continue;
+          this.net[i] |= flag;
+          this.tree[i] = 0;
+          this.rubble[i] = 0;
+          if (this.zone[i]) this.setZone(i % this.w, (i / this.w) | 0, 0, 0);
+        } else {
+          this.net[i] &= ~flag;
+        }
+      }
+      for (const i of net.touched) {
+        const x = i % this.w;
+        const y = (i / this.w) | 0;
+        this.markArea(x, y, x, y, DIRTY_GROUND | DIRTY_OBJECTS);
+      }
+      net.flips.clear();
+      net.touched.clear();
+    }
+    if (changed) {
+      this.tilesDirty = true;
+      this.roadVersion++;
+    }
+    return changed;
   }
 
   // ------------------------------------------------------------ buildings
