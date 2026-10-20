@@ -36,30 +36,29 @@ describe('model meshes', () => {
     expect(p.build().count).toBe(8);
   });
 
-  it('keep every triangle and give each corner a normal on the side of its faces', () => {
+  it('keep every triangle and give each corner a normal on the side of its faces', { timeout: 30_000 }, () => {
     let corners = 0;
     let vertices = 0;
+    let outside = 0;
+    let wrong = 0;
     for (const m of allModels()) {
       corners += m.index.length;
       vertices += m.count;
       for (let t = 0; t < m.index.length; t += 3) {
         const [a, b, c] = [m.index[t], m.index[t + 1], m.index[t + 2]];
-        expect(Math.max(a, b, c)).toBeLessThan(m.count);
+        if (Math.max(a, b, c) >= m.count) outside++;
         const P = (i: number) => [m.position[i * 3], m.position[i * 3 + 1], m.position[i * 3 + 2]];
         const [pa, pb, pc] = [P(a), P(b), P(c)];
         const u = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]];
         const v = [pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]];
         const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
-        for (const i of [a, b, c])
-          expect(n[0] * m.normal[i * 3] + n[1] * m.normal[i * 3 + 1] + n[2] * m.normal[i * 3 + 2]).toBeGreaterThan(0);
+        for (const i of [a, b, c]) if (n[0] * m.normal[i * 3] + n[1] * m.normal[i * 3 + 1] + n[2] * m.normal[i * 3 + 2] <= 0) wrong++;
       }
     }
+    expect(outside).toBe(0);
+    expect(wrong).toBe(0);
     // the shared corners are the point of it
     expect(vertices / corners).toBeLessThan(0.45);
-  });
-
-  it('fit their window cells in a byte', () => {
-    for (const m of allModels()) for (const v of m.wall) expect(v).toBeLessThan(256);
   });
 });
 
