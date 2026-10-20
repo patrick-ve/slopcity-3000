@@ -67,6 +67,25 @@ export class OptionsPanel implements Panel {
         (v) => (st.shadows = v),
       ),
     );
+    b.appendChild(
+      seg(
+        'Smooth edges',
+        st.edges,
+        [
+          ['auto', 'Auto'],
+          ['on', 'On'],
+          ['off', 'Off'],
+        ],
+        (v) => (st.edges = v),
+      ),
+    );
+    b.appendChild(
+      h(
+        'div',
+        { class: 'note', style: 'margin:-2px 0 8px' },
+        `Smoothing needs a lot of graphics memory on sharp (Retina) screens, so Auto leaves it off there. Now: ${g.renderer.smoothing ? 'on' : 'off'}.`,
+      ),
+    );
     b.appendChild(toggle('Day / night cycle', 'Watch the city light up at night.', st.dayNight, (v) => (st.dayNight = v)));
     b.appendChild(toggle('Show grid', 'Draw tile lines on the ground (G).', st.grid, (v) => (st.grid = v)));
     b.appendChild(h('div', { class: 'section-title' }, 'Sound'));

@@ -87,6 +87,49 @@ test('draw a curved road with three clicks', async ({ page }) => {
   await expect.poll(() => roadTiles(page)).toBe(0);
 });
 
+test('switch edge smoothing and come back from a lost WebGL context', async ({ page }) => {
+  await page.getByRole('button', { name: /New city/ }).click();
+  await page.getByRole('button', { name: 'Flat' }).click();
+  await page.getByRole('button', { name: 'None', exact: true }).click();
+  await page.getByRole('button', { name: /Start building/ }).click();
+  await expect(page.locator('.topbar')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { slop: Slop }).slop.setSpeed(0));
+  type View = {
+    slop: { renderer: { smoothing: boolean; chunks: { ground: unknown }[]; renderer: { getContext(): WebGL2RenderingContext } } };
+  };
+  const smoothing = () => page.evaluate(() => (window as unknown as View).slop.renderer.smoothing);
+  // this test screen is not a Retina one: Auto smooths edges
+  expect(await smoothing()).toBe(true);
+  const first = await page.locator('#view canvas').elementHandle();
+  await page.locator('button[title="Options"]').click();
+  await page.locator('.row', { hasText: 'Smooth edges' }).getByRole('button', { name: 'Off', exact: true }).click();
+  // multisampling is fixed per context: a new canvas takes over
+  expect(await smoothing()).toBe(false);
+  await expect(page.locator('#view canvas')).toHaveCount(1);
+  expect(await first!.evaluate((c) => c.isConnected)).toBe(false);
+  await page.keyboard.press('Escape');
+  // the new canvas still takes the mouse
+  await page.keyboard.press('KeyR');
+  await page.mouse.move(560, 420);
+  await page.mouse.down();
+  await page.mouse.move(760, 430, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(() => roadTiles(page)).toBeGreaterThan(3);
+  // the chunk meshes keep no vertex data after upload: a restored context rebuilds them
+  await page.evaluate(() => {
+    const lose = (window as unknown as View).slop.renderer.renderer.getContext().getExtension('WEBGL_lose_context')!;
+    lose.loseContext();
+    setTimeout(() => lose.restoreContext(), 200);
+  });
+  const restored = () =>
+    page.evaluate(() => {
+      const r = (window as unknown as View).slop.renderer;
+      return !r.renderer.getContext().isContextLost() && r.chunks.every((c) => c.ground);
+    });
+  await expect.poll(restored).toBe(true);
+  expect(await roadTiles(page)).toBeGreaterThan(3);
+});
+
 test('take over a starter city', async ({ page }) => {
   await page.getByRole('button', { name: /Starter cities/ }).click();
   const riverside = page.locator('.slot').filter({ hasText: 'Riverside' });

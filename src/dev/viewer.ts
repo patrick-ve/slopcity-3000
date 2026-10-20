@@ -97,7 +97,7 @@ for (const it of shown) {
     if (showLabels) {
       const el = document.createElement('div');
       el.className = 'lbl';
-      el.textContent = `${it.label}${variants > 1 ? ` v${v}` : ''} · ${mesh.count / 3} tris`;
+      el.textContent = `${it.label}${variants > 1 ? ` v${v}` : ''} · ${mesh.index.length / 3} tris`;
       labels.appendChild(el);
       labelEls.push({ el, pos: new THREE.Vector3(cx + it.w / 2, 0, cz + it.h + 0.3) });
     }

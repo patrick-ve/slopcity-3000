@@ -51,16 +51,20 @@ float hash21(vec2 p) {
 `;
 
 /**
- * Material for buildings, trees and props. Vertex attributes:
- *  - color (sRGB, uint8), aWall (window cell coords), aInfo (style, seed).
+ * Material for buildings, trees and props. Vertex attributes (see buffers.ts):
+ *  - color (sRGB, uint8), aWin (window cell u, v, style, seed).
+ * With `windows: false` (trees) the mesh has no aWin and the shader skips the windows.
  */
-export function createBuildingMaterial(opts: { transparent?: boolean; opacity?: number } = {}): THREE.MeshLambertMaterial {
+export function createBuildingMaterial(
+  opts: { transparent?: boolean; opacity?: number; windows?: boolean } = {},
+): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({
     vertexColors: true,
     flatShading: true,
     transparent: opts.transparent ?? false,
     opacity: opts.opacity ?? 1,
   });
+  if (opts.windows === false) m.defines = { NO_WINDOWS: '' };
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = shared.uNight;
     shader.uniforms.uOverlay = shared.uOverlay;
@@ -70,13 +74,14 @@ export function createBuildingMaterial(opts: { transparent?: boolean; opacity?: 
       .replace(
         '#include <common>',
         /* glsl */ `#include <common>
-attribute vec2 aWall;
-attribute vec2 aInfo;
+#ifndef NO_WINDOWS
+attribute vec4 aWin;
 varying vec2 vWall;
 varying vec2 vInfo;
+#endif
 varying vec3 vWorld;`,
       )
-      .replace('#include <color_vertex>', SRGB_TO_LINEAR_VERTEX + '\nvWall = aWall;\nvInfo = aInfo;\n')
+      .replace('#include <color_vertex>', SRGB_TO_LINEAR_VERTEX + '\n#ifndef NO_WINDOWS\nvWall = aWin.xy;\nvInfo = aWin.zw;\n#endif\n')
       .replace('#include <project_vertex>', WORLD_POS_VERTEX);
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -86,8 +91,10 @@ uniform float uNight;
 uniform sampler2D uOverlay;
 uniform float uOverlayAmt;
 uniform vec2 uMapSize;
+#ifndef NO_WINDOWS
 varying vec2 vWall;
 varying vec2 vInfo;
+#endif
 varying vec3 vWorld;
 ${HASH}`,
       )
@@ -97,6 +104,7 @@ ${HASH}`,
 float winLit = 0.0;
 float litK = 1.0;
 vec3 litColor = vec3(1.0, 0.76, 0.42);
+#ifndef NO_WINDOWS
 {
   float style = floor(vInfo.x + 0.5);
   float dark = 0.0;
@@ -128,6 +136,7 @@ vec3 litColor = vec3(1.0, 0.76, 0.42);
     winLit = inside * on * uNight;
   }
 }
+#endif
 if (uOverlayAmt > 0.0) {
   vec4 ov = texture2D(uOverlay, vWorld.xz / uMapSize);
   diffuseColor.rgb = mix(diffuseColor.rgb, ov.rgb, ov.a * uOverlayAmt * 0.75);
@@ -214,22 +223,4 @@ export function createPlainMaterial(): THREE.MeshLambertMaterial {
     shader.vertexShader = shader.vertexShader.replace('#include <color_vertex>', SRGB_TO_LINEAR_VERTEX);
   };
   return m;
-}
-
-/** Build a BufferGeometry from merged model arrays. */
-export function makeObjectGeometry(
-  count: number,
-  position: Float32Array,
-  normal: Int8Array,
-  color: Uint8Array,
-  wall: Float32Array,
-  info: Uint8Array,
-): THREE.BufferGeometry {
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(position.subarray(0, count * 3), 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(normal.subarray(0, count * 3), 3, true));
-  g.setAttribute('color', new THREE.BufferAttribute(color.subarray(0, count * 3), 3, true));
-  g.setAttribute('aWall', new THREE.BufferAttribute(wall.subarray(0, count * 2), 2));
-  g.setAttribute('aInfo', new THREE.BufferAttribute(info.subarray(0, count * 2), 2));
-  return g;
 }

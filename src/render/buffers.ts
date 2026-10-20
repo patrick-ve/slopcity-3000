@@ -2,8 +2,21 @@ import * as THREE from 'three';
 import type { ModelMesh } from './geom';
 import { hexToRgb } from './geom';
 
+/**
+ * Vertex layout of the chunk meshes. Every attribute fills whole 4-byte words:
+ * graphics drivers (Metal through ANGLE, for one) copy attributes with a 3- or
+ * 2-byte stride into a second, padded buffer, which costs more memory than the
+ * padding itself.
+ *  - position: float32 ×3
+ *  - normal: int8 ×4 (w unused). Lighting is per face (flat shading), so only
+ *    the shadow lookup offset uses it.
+ *  - color: uint8 ×4, sRGB, alpha always 255
+ *  - aWin (meshes with windows): uint8 ×4 = window cell u, v, window style
+ *    (+128 when dark) and the building's seed
+ */
+
 /** Growable typed array. */
-class Grow<T extends Float32Array | Int8Array | Uint8Array> {
+class Grow<T extends Float32Array | Int8Array | Uint8Array | Uint32Array> {
   arr: T;
   len = 0;
   constructor(
@@ -20,14 +33,36 @@ class Grow<T extends Float32Array | Int8Array | Uint8Array> {
     next.set(this.arr.subarray(0, this.len));
     this.arr = next;
   }
+  /** A copy of the used part. */
+  copy(): T {
+    return this.arr.slice(0, this.len) as T;
+  }
 }
 
-/** Ground buffer: position + normal + colour (sRGB). */
+/**
+ * Let the renderer drop a geometry's vertex data once it is on the GPU (the
+ * chunk meshes are never read back or changed; they are rebuilt instead).
+ * A new or restored WebGL context must then rebuild them.
+ */
+export function releaseAfterUpload(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  const drop = (a: THREE.BufferAttribute) => a.onUpload(() => ((a as unknown as { array: null }).array = null));
+  for (const a of Object.values(g.attributes)) if (a instanceof THREE.BufferAttribute) drop(a);
+  if (g.index) drop(g.index);
+  return g;
+}
+
+/** Ground buffer: position, normal and colour per vertex, three vertices per triangle. */
 export class GroundBuf {
   private P = new Grow(Float32Array, 4096 * 3);
-  private N = new Grow(Int8Array, 4096 * 3);
-  private C = new Grow(Uint8Array, 4096 * 3);
+  private N = new Grow(Int8Array, 4096 * 4);
+  private C = new Grow(Uint8Array, 4096 * 4);
   count = 0;
+
+  /** Empty the buffer and keep its memory for the next build. */
+  reset(): void {
+    this.P.len = this.N.len = this.C.len = 0;
+    this.count = 0;
+  }
 
   tri(ax: number, ay: number, az: number, bx: number, by: number, bz: number, cx: number, cy: number, cz: number, hex: number): void {
     const ux = bx - ax;
@@ -45,8 +80,8 @@ export class GroundBuf {
     nz = Math.round((nz / l) * 127);
     const [r, g, b] = hexToRgb(hex);
     this.P.reserve(9);
-    this.N.reserve(9);
-    this.C.reserve(9);
+    this.N.reserve(12);
+    this.C.reserve(12);
     const p = this.P.arr;
     let o = this.P.len;
     p[o++] = ax;
@@ -65,9 +100,11 @@ export class GroundBuf {
       n[this.N.len++] = nx;
       n[this.N.len++] = ny;
       n[this.N.len++] = nz;
+      n[this.N.len++] = 0;
       c[this.C.len++] = r;
       c[this.C.len++] = g;
       c[this.C.len++] = b;
+      c[this.C.len++] = 255;
     }
     this.count += 3;
   }
@@ -80,9 +117,9 @@ export class GroundBuf {
 
   toGeometry(): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(this.P.arr.slice(0, this.P.len), 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(this.N.arr.slice(0, this.N.len), 3, true));
-    g.setAttribute('color', new THREE.BufferAttribute(this.C.arr.slice(0, this.C.len), 3, true));
+    g.setAttribute('position', new THREE.BufferAttribute(this.P.copy(), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(this.N.copy(), 4, true));
+    g.setAttribute('color', new THREE.BufferAttribute(this.C.copy(), 4, true));
     g.computeBoundingSphere();
     return g;
   }
@@ -136,32 +173,45 @@ export interface ModelInstanceOpts {
   dark?: boolean;
 }
 
-/** Object buffer: position, normal, colour, window coords and info (style, seed). */
+/**
+ * Object buffer: indexed triangles with position, normal, colour and (unless
+ * `windows` is false, as for trees) window info per vertex.
+ */
 export class ObjectBuf {
   private P = new Grow(Float32Array, 8192 * 3);
-  private N = new Grow(Int8Array, 8192 * 3);
-  private C = new Grow(Uint8Array, 8192 * 3);
-  private W = new Grow(Float32Array, 8192 * 2);
-  private I = new Grow(Uint8Array, 8192 * 2);
+  private N = new Grow(Int8Array, 8192 * 4);
+  private C = new Grow(Uint8Array, 8192 * 4);
+  private W: Grow<Uint8Array> | null;
+  private X = new Grow(Uint32Array, 8192 * 2);
+  /** Vertices so far. */
   count = 0;
+
+  constructor(readonly windows = true) {
+    this.W = windows ? new Grow(Uint8Array, 8192 * 4) : null;
+  }
+
+  /** Empty the buffer and keep its memory for the next build. */
+  reset(): void {
+    this.P.len = this.N.len = this.C.len = this.X.len = 0;
+    if (this.W) this.W.len = 0;
+    this.count = 0;
+  }
 
   addModel(m: ModelMesh, pl: Placement, o: ModelInstanceOpts): void {
     const n = m.count;
     this.P.reserve(n * 3);
-    this.N.reserve(n * 3);
-    this.C.reserve(n * 3);
-    this.W.reserve(n * 2);
-    this.I.reserve(n * 2);
+    this.N.reserve(n * 4);
+    this.C.reserve(n * 4);
+    this.W?.reserve(n * 4);
+    this.X.reserve(m.index.length);
     const P = this.P.arr;
     const N = this.N.arr;
     const C = this.C.arr;
-    const W = this.W.arr;
-    const I = this.I.arr;
+    const W = this.W?.arr;
     let po = this.P.len;
     let no = this.N.len;
     let co = this.C.len;
-    let wo = this.W.len;
-    let io = this.I.len;
+    let wo = this.W?.len ?? 0;
     const mul = o.colorMul ?? 1;
     const desat = o.desat ?? 0;
     const dark = o.dark ? 128 : 0;
@@ -179,6 +229,7 @@ export class ObjectBuf {
       N[no++] = Math.round((pl.a * nx + pl.b * nz) / sc);
       N[no++] = ny;
       N[no++] = Math.round((pl.c * nx + pl.d * nz) / sc);
+      N[no++] = 0;
       let r = m.color[v * 3];
       let g = m.color[v * 3 + 1];
       let b = m.color[v * 3 + 2];
@@ -191,17 +242,24 @@ export class ObjectBuf {
       C[co++] = Math.min(255, r * mul);
       C[co++] = Math.min(255, g * mul);
       C[co++] = Math.min(255, b * mul);
-      W[wo++] = m.wall[v * 2];
-      W[wo++] = m.wall[v * 2 + 1];
-      const s = m.win[v];
-      I[io++] = s ? s + dark : 0;
-      I[io++] = o.seed;
+      C[co++] = 255;
+      if (W) {
+        const s = m.win[v];
+        W[wo++] = m.wall[v * 2];
+        W[wo++] = m.wall[v * 2 + 1];
+        W[wo++] = s ? s + dark : 0;
+        W[wo++] = o.seed;
+      }
     }
+    const X = this.X.arr;
+    let xo = this.X.len;
+    const base = this.count;
+    for (let k = 0; k < m.index.length; k++) X[xo++] = base + m.index[k];
     this.P.len = po;
     this.N.len = no;
     this.C.len = co;
-    this.W.len = wo;
-    this.I.len = io;
+    if (this.W) this.W.len = wo;
+    this.X.len = xo;
     this.count += n;
   }
 
@@ -222,10 +280,10 @@ export class ObjectBuf {
     ny = Math.round((ny / l) * 127);
     nz = Math.round((nz / l) * 127);
     this.P.reserve(9);
-    this.N.reserve(9);
-    this.C.reserve(9);
-    this.W.reserve(6);
-    this.I.reserve(6);
+    this.N.reserve(12);
+    this.C.reserve(12);
+    this.W?.reserve(12);
+    this.X.reserve(3);
     for (const p of [a, b, c]) {
       this.P.arr[this.P.len++] = p[0];
       this.P.arr[this.P.len++] = p[1];
@@ -233,15 +291,14 @@ export class ObjectBuf {
       this.N.arr[this.N.len++] = nx;
       this.N.arr[this.N.len++] = ny;
       this.N.arr[this.N.len++] = nz;
+      this.N.arr[this.N.len++] = 0;
       this.C.arr[this.C.len++] = r;
       this.C.arr[this.C.len++] = g;
       this.C.arr[this.C.len++] = bl;
-      this.W.arr[this.W.len++] = 0;
-      this.W.arr[this.W.len++] = 0;
-      this.I.arr[this.I.len++] = 0;
-      this.I.arr[this.I.len++] = 0;
+      this.C.arr[this.C.len++] = 255;
+      if (this.W) for (let k = 0; k < 4; k++) this.W.arr[this.W.len++] = 0;
+      this.X.arr[this.X.len++] = this.count++;
     }
-    this.count += 3;
   }
 
   /** Box between two points with square cross-section (wires, pipes). */
@@ -308,11 +365,13 @@ export class ObjectBuf {
 
   toGeometry(): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(this.P.arr.slice(0, this.P.len), 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(this.N.arr.slice(0, this.N.len), 3, true));
-    g.setAttribute('color', new THREE.BufferAttribute(this.C.arr.slice(0, this.C.len), 3, true));
-    g.setAttribute('aWall', new THREE.BufferAttribute(this.W.arr.slice(0, this.W.len), 2));
-    g.setAttribute('aInfo', new THREE.BufferAttribute(this.I.arr.slice(0, this.I.len), 2));
+    g.setAttribute('position', new THREE.BufferAttribute(this.P.copy(), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(this.N.copy(), 4, true));
+    g.setAttribute('color', new THREE.BufferAttribute(this.C.copy(), 4, true));
+    if (this.W) g.setAttribute('aWin', new THREE.BufferAttribute(this.W.copy(), 4));
+    // 16-bit indices when they fit; WebGL 2 reserves 0xffff to restart primitives
+    const index = this.count < 0xffff ? new Uint16Array(this.X.arr.subarray(0, this.X.len)) : this.X.copy();
+    g.setIndex(new THREE.BufferAttribute(index, 1));
     g.computeBoundingSphere();
     return g;
   }

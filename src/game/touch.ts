@@ -32,7 +32,7 @@ export class TouchGestures {
 
   constructor(
     private game: Game,
-    private canvas: HTMLCanvasElement,
+    private view: HTMLElement,
     private panBy: (dx: number, dy: number) => void,
     private zoomAt: (factor: number, sx: number, sy: number) => void,
   ) {}
@@ -44,7 +44,7 @@ export class TouchGestures {
 
   down(e: PointerEvent): void {
     try {
-      this.canvas.setPointerCapture(e.pointerId);
+      this.view.setPointerCapture(e.pointerId);
     } catch {
       /* the pointer may already be gone */
     }

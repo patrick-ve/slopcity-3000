@@ -41,16 +41,29 @@ export interface Rotor {
 }
 
 export interface ModelMesh {
+  /** Vertices; a corner that neighbouring faces share is stored once (see GeometryBuilder.build). */
   count: number;
   position: Float32Array;
+  /** Int8 normals. A shared corner gets the average of its faces: lighting is per face, only shadows use them. */
   normal: Int8Array;
   color: Uint8Array;
-  wall: Float32Array;
+  /** Window cell coordinates (u, v). */
+  wall: Uint8Array;
   win: Uint8Array;
+  /** Triangles: three vertex indices each. */
+  index: Uint16Array | Uint32Array;
   height: number;
   emitters: Emitter[];
   rotors: Rotor[];
 }
+
+/**
+ * Faces share a corner (when its other attributes match) only if each of them
+ * is at most this far (cosine, a little over 90°) from every other face there.
+ * The averaged normal then still points out of each of them: box corners are
+ * shared, the two sides of a panel are not.
+ */
+const SHARE_COS = -0.02;
 
 export interface BoxOpts {
   /** Colour of the top face (defaults to current colour). */
@@ -910,15 +923,80 @@ export class GeometryBuilder {
     return this.P.length / 3;
   }
 
+  /**
+   * The finished mesh. Triangle corners with the same position, colour and
+   * window data become one vertex when their faces point the same way closely
+   * enough (SHARE_COS); about a third of the corners are left.
+   */
   build(): ModelMesh {
-    const count = this.P.length / 3;
+    const { P, N, C, W, S } = this;
+    const corners = P.length / 3;
+    const slots = new Map<string, number[]>();
+    const pos: number[] = [];
+    const col: number[] = [];
+    const wall: number[] = [];
+    const win: number[] = [];
+    // per vertex: the normals of its faces (for the angle test) and their sum
+    const faces: number[][] = [];
+    const sum: number[] = [];
+    const index = new Array<number>(corners);
+    for (let i = 0; i < corners; i++) {
+      const x = Math.fround(P[i * 3]);
+      const y = Math.fround(P[i * 3 + 1]);
+      const z = Math.fround(P[i * 3 + 2]);
+      const u = Math.max(0, Math.min(255, W[i * 2]));
+      const v = Math.max(0, Math.min(255, W[i * 2 + 1]));
+      const key = `${x},${y},${z},${C[i * 3]},${C[i * 3 + 1]},${C[i * 3 + 2]},${u},${v},${S[i]}`;
+      const l = Math.hypot(N[i * 3], N[i * 3 + 1], N[i * 3 + 2]) || 1;
+      const nx = N[i * 3] / l;
+      const ny = N[i * 3 + 1] / l;
+      const nz = N[i * 3 + 2] / l;
+      const list = slots.get(key);
+      let k = -1;
+      for (const c of list ?? []) {
+        const f = faces[c];
+        let ok = true;
+        for (let j = 0; j < f.length && ok; j += 3) ok = f[j] * nx + f[j + 1] * ny + f[j + 2] * nz >= SHARE_COS;
+        if (!ok) continue;
+        k = c;
+        break;
+      }
+      if (k < 0) {
+        k = pos.length / 3;
+        pos.push(x, y, z);
+        col.push(C[i * 3], C[i * 3 + 1], C[i * 3 + 2]);
+        wall.push(u, v);
+        win.push(S[i]);
+        faces.push([]);
+        sum.push(0, 0, 0);
+        if (list) list.push(k);
+        else slots.set(key, [k]);
+      }
+      const f = faces[k];
+      let known = false;
+      for (let j = 0; j < f.length && !known; j += 3) known = f[j] * nx + f[j + 1] * ny + f[j + 2] * nz > 0.9999;
+      if (!known) f.push(nx, ny, nz);
+      sum[k * 3] += nx;
+      sum[k * 3 + 1] += ny;
+      sum[k * 3 + 2] += nz;
+      index[i] = k;
+    }
+    const count = pos.length / 3;
+    const normal = new Int8Array(count * 3);
+    for (let k = 0; k < count; k++) {
+      // faces at most ~90° apart: the sum never cancels out
+      const l = Math.hypot(sum[k * 3], sum[k * 3 + 1], sum[k * 3 + 2]) || 1;
+      for (let a = 0; a < 3; a++) normal[k * 3 + a] = Math.round((sum[k * 3 + a] / l) * 127);
+    }
     return {
       count,
-      position: new Float32Array(this.P),
-      normal: new Int8Array(this.N),
-      color: new Uint8Array(this.C),
-      wall: new Float32Array(this.W),
-      win: new Uint8Array(this.S),
+      position: new Float32Array(pos),
+      normal,
+      color: new Uint8Array(col),
+      wall: new Uint8Array(wall),
+      win: new Uint8Array(win),
+      // WebGL 2 reserves 0xffff in 16-bit indices to restart primitives
+      index: count < 0xffff ? new Uint16Array(index) : new Uint32Array(index),
       height: this.maxY,
       emitters: this.emitters,
       rotors: this.rotors,

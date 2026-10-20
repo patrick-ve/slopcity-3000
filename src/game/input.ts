@@ -26,27 +26,27 @@ export class Input {
 
   constructor(
     private game: Game,
-    private canvas: HTMLCanvasElement,
+    private view: HTMLElement,
   ) {
     this.touch = new TouchGestures(
       game,
-      canvas,
+      view,
       (dx, dy) => this.panScreen(dx, dy),
       (f, sx, sy) => this.zoomAt(f, sx, sy),
     );
-    canvas.addEventListener('pointerdown', (e) => this.down(e));
-    canvas.addEventListener('pointermove', (e) => this.move(e));
-    canvas.addEventListener('pointerup', (e) => this.up(e));
-    canvas.addEventListener('pointercancel', (e) => this.cancelPointer(e));
-    canvas.addEventListener('pointerenter', () => (this.pointerOverUI = false));
-    canvas.addEventListener('pointerleave', (e) => {
+    view.addEventListener('pointerdown', (e) => this.down(e));
+    view.addEventListener('pointermove', (e) => this.move(e));
+    view.addEventListener('pointerup', (e) => this.up(e));
+    view.addEventListener('pointercancel', (e) => this.cancelPointer(e));
+    view.addEventListener('pointerenter', () => (this.pointerOverUI = false));
+    view.addEventListener('pointerleave', (e) => {
       // touch pointers "leave" after every lift; the touch handler hides the preview itself
       if (e.pointerType === 'touch') return;
       this.pointerOverUI = true;
       if (!this.leftDown) this.game.tools.move(null, false);
     });
-    canvas.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    view.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
+    view.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('keydown', (e) => this.keydown(e));
     window.addEventListener('keyup', (e) => this.held.delete(e.code));
     window.addEventListener('blur', () => this.held.clear());
@@ -61,7 +61,7 @@ export class Input {
       this.touch.down(e);
       return;
     }
-    this.canvas.setPointerCapture(e.pointerId);
+    this.view.setPointerCapture(e.pointerId);
     if (e.button === 2) {
       this.pan = { x: e.clientX, y: e.clientY, moved: false };
     } else if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -149,7 +149,7 @@ export class Input {
   /** Pan the view by a screen-space drag (pixels). */
   private panScreen(dx: number, dy: number): void {
     const cam = this.game.renderer.cam;
-    const upp = cam.unitsPerPixel(this.canvas.clientHeight);
+    const upp = cam.unitsPerPixel(this.view.clientHeight);
     cam.pan(-dx * upp, (dy * upp) / Math.sin(cam.pitch));
     cam.target.copy(cam.goalTarget);
   }

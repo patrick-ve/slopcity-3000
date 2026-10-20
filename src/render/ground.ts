@@ -42,9 +42,13 @@ function isBeach(world: World, x: number, y: number): boolean {
   return false;
 }
 
-/** Build terrain + roads + rails for one chunk. */
+// Reused by every chunk build: turn a result into geometry before the next build.
+const GROUND = new GroundBuf();
+
+/** Build terrain + roads + rails for one chunk. The buffer is reused by the next call. */
 export function buildGround(world: World, cx: number, cy: number): GroundBuf {
-  const buf = new GroundBuf();
+  const buf = GROUND;
+  buf.reset();
   const x0 = cx * CHUNK;
   const y0 = cy * CHUNK;
   const x1 = Math.min(world.w, x0 + CHUNK);

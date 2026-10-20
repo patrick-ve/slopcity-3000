@@ -103,6 +103,10 @@ Start a **new city**, take over one of the **starter cities**, or try a **scenar
 - **Rendering**: around 70 procedural low-poly building models, flat shading, soft shadows,
   procedural window grids that light up at night, a day/night cycle, animated water with
   shore foam, traffic, trains, smoke, fire, spinning wind turbines and status icons.
+- **Memory**: the map is drawn in 16×16-tile chunks of indexed geometry (faces share corners, every
+  vertex attribute fills whole 4-byte words) whose vertex data is dropped once it is on the GPU; a
+  slim shadow map (1-byte colour, 16-bit depth). Edge smoothing (multisampling) is off by default on
+  Retina-class screens, where it costs the most memory; turn it on in Options.
 
 ## Project layout
 

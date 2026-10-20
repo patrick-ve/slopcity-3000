@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Sim } from '../sim/sim';
 import { getDef } from '../sim/catalog';
-import { CHUNK, DIRTY_GROUND, DIRTY_OBJECTS, DIRTY_PIPES, LEVEL_H } from '../sim/world';
+import { CHUNK, DIRTY_ALL, DIRTY_GROUND, DIRTY_OBJECTS, DIRTY_PIPES, LEVEL_H } from '../sim/world';
 import { needsPower, needsWater } from '../sim/util';
 import { ROAD_REACH } from '../sim/networks';
 import { CameraController } from './camera';
@@ -19,6 +19,7 @@ import { Preview } from './preview';
 import { Effects } from './fx';
 import { Trains } from './trains';
 import { pickTerrain, type PickResult } from './picker';
+import { releaseAfterUpload } from './buffers';
 
 interface Chunk {
   ground: THREE.Mesh | null;
@@ -31,9 +32,43 @@ interface Chunk {
 }
 
 export type ShadowQuality = 'off' | 'low' | 'high';
+export type EdgeSmoothing = 'auto' | 'on' | 'off';
+
+/**
+ * Whether edges are smoothed (multisampling). 'auto' skips it on sharp screens
+ * (Retina and alike): there the multisampled buffers cost the most memory,
+ * about 170 MB for a laptop screen, and the steps between pixels are hard to see.
+ */
+export function smoothEdges(setting: EdgeSmoothing, pixelRatio = window.devicePixelRatio): boolean {
+  return setting === 'on' || (setting === 'auto' && pixelRatio < 1.75);
+}
+
+/**
+ * Shadow map target. three.js samples only the depth texture for PCF shadows,
+ * so the colour buffer it needs can be one byte per texel and the depth 16
+ * bits: 48 MB at 4096² instead of the 128 MB of three's default target
+ * (RGBA8 colour, 24-bit depth stored in 32 bits).
+ */
+function shadowTarget(size: number): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(size, size, {
+    format: THREE.RedFormat,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    generateMipmaps: false,
+  });
+  const depth = new THREE.DepthTexture(size, size, THREE.UnsignedShortType);
+  depth.format = THREE.DepthFormat;
+  depth.compareFunction = THREE.LessEqualCompare;
+  depth.minFilter = THREE.LinearFilter;
+  depth.magFilter = THREE.LinearFilter;
+  depth.name = target.texture.name = 'sun.shadowMap';
+  target.depthTexture = depth;
+  return target;
+}
 
 export class GameRenderer {
-  readonly renderer: THREE.WebGLRenderer;
+  /** Replaced when edge smoothing changes (see setEdges). */
+  renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly cam = new CameraController();
   readonly sky: Sky;
@@ -52,6 +87,7 @@ export class GameRenderer {
   private chunks: Chunk[] = [];
   private groundMat = createTerrainMaterial();
   private objectMat = createBuildingMaterial();
+  private treeMat = createBuildingMaterial({ windows: false });
   private pipeMat = createBuildingMaterial();
   private skirtMat = createPlainMaterial();
   private chunkGroup = new THREE.Group();
@@ -68,20 +104,20 @@ export class GameRenderer {
   private width = 1;
   private height = 1;
   shadowQuality: ShadowQuality = 'high';
+  private edges: EdgeSmoothing;
+  private antialias: boolean;
   /** Trees cast shadows only when the camera is reasonably close. */
   private treeShadows = true;
   showGrid = false;
 
-  constructor(private container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.renderer.toneMapping = THREE.NeutralToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
-    this.renderer.setClearColor(0x000000, 0);
+  constructor(
+    private container: HTMLElement,
+    edges: EdgeSmoothing = 'auto',
+  ) {
+    this.edges = edges;
+    this.antialias = smoothEdges(edges);
+    this.renderer = this.createContext(this.antialias);
     container.appendChild(this.renderer.domElement);
-    this.renderer.domElement.style.display = 'block';
 
     this.hemi = new THREE.HemisphereLight(0xcfe4ff, 0x76664e, 1.2);
     this.scene.add(this.hemi);
@@ -101,15 +137,81 @@ export class GameRenderer {
     this.pipeMat.depthTest = true;
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    this.watchPixelRatio();
   }
 
   get canvas(): HTMLCanvasElement {
     return this.renderer.domElement;
   }
 
+  /** A WebGL context with the game's settings, drawing into a new canvas. */
+  private createContext(antialias: boolean): THREE.WebGLRenderer {
+    const r = new THREE.WebGLRenderer({ antialias, alpha: true, powerPreference: 'high-performance' });
+    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    r.shadowMap.enabled = this.shadowQuality !== 'off';
+    r.shadowMap.type = THREE.PCFShadowMap;
+    r.toneMapping = THREE.NeutralToneMapping;
+    r.toneMappingExposure = 1.05;
+    r.setClearColor(0x000000, 0);
+    r.domElement.style.display = 'block';
+    // three.js uploads everything again, but the chunk meshes dropped their data after the first upload
+    r.domElement.addEventListener('webglcontextrestored', () => this.reupload());
+    return r;
+  }
+
+  /** Smooth edges or not. Multisampling is fixed when a WebGL context is made, so a change swaps in a new one. */
+  setEdges(edges: EdgeSmoothing): void {
+    this.edges = edges;
+    const want = smoothEdges(edges);
+    if (want === this.antialias) return;
+    this.antialias = want;
+    const old = this.renderer;
+    this.renderer = this.createContext(want);
+    old.domElement.replaceWith(this.renderer.domElement);
+    this.dropShadowMap();
+    old.dispose();
+    old.forceContextLoss();
+    this.resize();
+    this.reupload();
+  }
+
+  /** True when the current context smooths edges. */
+  get smoothing(): boolean {
+    return this.antialias;
+  }
+
+  /** Follow the pixel ratio when the window moves to another screen. */
+  private watchPixelRatio(): void {
+    const media = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    media.addEventListener(
+      'change',
+      () => {
+        this.resize();
+        this.setEdges(this.edges);
+        this.watchPixelRatio();
+      },
+      { once: true },
+    );
+  }
+
+  /** Rebuild the chunk meshes, which keep their vertex data only until it is on the GPU (see releaseAfterUpload). */
+  private reupload(): void {
+    if (!this.sim) return;
+    // their GPU buffers went with the old context: forget them (disposing them would call into it)
+    for (const c of this.chunks) {
+      for (const m of [c.ground, c.objects, c.trees, c.pipes]) if (m) this.chunkGroup.remove(m);
+      c.ground = c.objects = c.trees = c.pipes = null;
+    }
+    const w = this.sim.world;
+    for (let k = 0; k < this.chunks.length; k++) w.dirtyChunks.set(k, DIRTY_ALL);
+    this.flush(true);
+  }
+
   resize(): void {
     this.width = this.container.clientWidth || window.innerWidth;
     this.height = this.container.clientHeight || window.innerHeight;
+    const ratio = Math.min(window.devicePixelRatio, 2);
+    if (this.renderer.getPixelRatio() !== ratio) this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(this.width, this.height);
     this.cam.resize(this.width, this.height);
   }
@@ -135,14 +237,13 @@ export class GameRenderer {
     for (const c of [this.cars, this.hwyCars]) {
       if (!c) continue;
       c.mesh.geometry.dispose();
+      (c.mesh.material as THREE.Material).dispose();
       this.scene.remove(c.mesh);
     }
     if (this.trains) {
       this.trains.dispose();
       this.scene.remove(this.trains.group);
     }
-    if (this.preview) this.scene.remove(this.preview.group);
-    if (this.effects) this.scene.remove(this.effects.group);
     this.particles.clear();
 
     for (let i = 0; i < world.chunksX * world.chunksY; i++) {
@@ -178,10 +279,19 @@ export class GameRenderer {
     this.scene.add(this.hwyCars.mesh);
     this.trains = new Trains(world);
     this.scene.add(this.trains.group);
-    this.preview = new Preview(world);
-    this.scene.add(this.preview.group);
-    this.effects = new Effects(world);
-    this.scene.add(this.effects.group);
+    // the preview and the disaster effects keep their meshes from city to city
+    if (this.preview) {
+      this.preview.setWorld(world);
+      this.preview.clear();
+    } else {
+      this.preview = new Preview(world);
+      this.scene.add(this.preview.group);
+    }
+    if (this.effects) this.effects.setWorld(world);
+    else {
+      this.effects = new Effects(world);
+      this.scene.add(this.effects.group);
+    }
     this.cam.setWorld(world);
     this.cam.goalTarget.set(world.w / 2, 0, world.h / 2);
     this.cam.goalZoom = Math.min(world.w, world.h) * 0.32;
@@ -268,7 +378,7 @@ export class GameRenderer {
         this.chunkGroup.remove(c.ground);
       }
       const buf = buildGround(world, cx, cy);
-      c.ground = new THREE.Mesh(buf.toGeometry(), this.groundMat);
+      c.ground = new THREE.Mesh(releaseAfterUpload(buf.toGeometry()), this.groundMat);
       c.ground.receiveShadow = true;
       c.ground.castShadow = true;
       this.chunkGroup.add(c.ground);
@@ -280,13 +390,17 @@ export class GameRenderer {
         this.chunkGroup.remove(m);
       }
       const res = buildObjects(world, cx, cy);
-      c.objects = new THREE.Mesh(res.buf.toGeometry(), this.objectMat);
-      c.objects.castShadow = true;
-      c.objects.receiveShadow = true;
-      c.objects.visible = !this.underground;
+      c.objects = null;
+      if (res.buf.count) {
+        c.objects = new THREE.Mesh(releaseAfterUpload(res.buf.toGeometry()), this.objectMat);
+        c.objects.castShadow = true;
+        c.objects.receiveShadow = true;
+        c.objects.visible = !this.underground;
+        this.chunkGroup.add(c.objects);
+      }
       c.trees = null;
       if (res.trees.count) {
-        c.trees = new THREE.Mesh(res.trees.toGeometry(), this.objectMat);
+        c.trees = new THREE.Mesh(releaseAfterUpload(res.trees.toGeometry()), this.treeMat);
         c.trees.castShadow = this.treeShadows;
         c.trees.receiveShadow = true;
         c.trees.visible = !this.underground;
@@ -295,7 +409,6 @@ export class GameRenderer {
       c.emitters = res.emitters;
       c.rotors = res.rotors;
       c.tops = res.tops;
-      this.chunkGroup.add(c.objects);
       this.emittersDirty = true;
     }
     if (flags & DIRTY_PIPES) {
@@ -304,7 +417,7 @@ export class GameRenderer {
         this.chunkGroup.remove(c.pipes);
       }
       const buf = buildPipes(world, cx, cy, this.sim!.subwayLive);
-      c.pipes = buf.count ? new THREE.Mesh(buf.toGeometry(), this.pipeMat) : null;
+      c.pipes = buf.count ? new THREE.Mesh(releaseAfterUpload(buf.toGeometry()), this.pipeMat) : null;
       if (c.pipes) {
         c.pipes.visible = this.underground;
         this.chunkGroup.add(c.pipes);
@@ -365,11 +478,9 @@ export class GameRenderer {
     this.renderer.shadowMap.enabled = q !== 'off';
     this.sun.castShadow = q !== 'off';
     const size = q === 'high' ? 4096 : 2048;
-    if (this.sun.shadow.mapSize.x !== size) {
-      this.sun.shadow.mapSize.set(size, size);
-      this.sun.shadow.map?.dispose();
-      this.sun.shadow.map = null;
-    }
+    this.sun.shadow.mapSize.set(size, size);
+    // render() makes the map again at the new size; there is none while shadows are off
+    if (q === 'off' || this.sun.shadow.map?.width !== size) this.dropShadowMap();
     this.scene.traverse((o) => {
       const m = (o as THREE.Mesh).material as THREE.Material | undefined;
       if (m) m.needsUpdate = true;
@@ -505,7 +616,18 @@ export class GameRenderer {
   }
 
   render(): void {
+    // our own, smaller shadow map: three.js makes its default one when the light has none
+    const shadow = this.sun.shadow;
+    if (this.sun.castShadow && !shadow.map) shadow.map = shadowTarget(shadow.mapSize.x);
     this.renderer.render(this.scene, this.cam.camera);
+  }
+
+  private dropShadowMap(): void {
+    const map = this.sun.shadow.map;
+    if (!map) return;
+    map.depthTexture?.dispose();
+    map.dispose();
+    this.sun.shadow.map = null;
   }
 
   /** Dust burst when something is built or demolished. */

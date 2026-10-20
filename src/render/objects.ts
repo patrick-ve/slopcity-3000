@@ -215,9 +215,16 @@ function addPowerLine(world: World, out: ObjectChunk, x: number, y: number): voi
   }
 }
 
-/** Build buildings, trees, props and power lines for one chunk. */
+// Reused by every chunk build: turn a result into geometry before the next build.
+const OBJECTS = new ObjectBuf();
+const TREES = new ObjectBuf(false);
+const PIPES = new ObjectBuf();
+
+/** Build buildings, trees, props and power lines for one chunk. The buffers are reused by the next call. */
 export function buildObjects(world: World, cx: number, cy: number): ObjectChunk {
-  const out: ObjectChunk = { buf: new ObjectBuf(), trees: new ObjectBuf(), emitters: [], rotors: [], tops: new Map() };
+  OBJECTS.reset();
+  TREES.reset();
+  const out: ObjectChunk = { buf: OBJECTS, trees: TREES, emitters: [], rotors: [], tops: new Map() };
   const x0 = cx * CHUNK;
   const y0 = cy * CHUNK;
   const x1 = Math.min(world.w, x0 + CHUNK);
@@ -284,9 +291,10 @@ function addSubway(world: World, buf: ObjectBuf, x: number, y: number, linked: b
   }
 }
 
-/** Underground pipes and subway lines for one chunk (shown in the underground view). */
+/** Underground pipes and subway lines for one chunk (shown in the underground view). The buffer is reused by the next call. */
 export function buildPipes(world: World, cx: number, cy: number, subwayLive?: Uint8Array): ObjectBuf {
-  const buf = new ObjectBuf();
+  const buf = PIPES;
+  buf.reset();
   const x0 = cx * CHUNK;
   const y0 = cy * CHUNK;
   const x1 = Math.min(world.w, x0 + CHUNK);

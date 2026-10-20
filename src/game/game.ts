@@ -5,7 +5,7 @@ import type { Speed } from '../sim/types';
 import { deserialize, loadFromSlot, saveToSlot, serialize } from '../sim/save';
 import { formatDate, money } from '../util/format';
 import { randomSeed } from '../util/rng';
-import { GameRenderer, type ShadowQuality } from '../render/renderer';
+import { GameRenderer, type EdgeSmoothing, type ShadowQuality } from '../render/renderer';
 import type { OverlayId } from '../render/overlays';
 import { Sfx } from '../audio/sfx';
 import { Music } from '../audio/music';
@@ -27,6 +27,8 @@ export type Mode = 'menu' | 'play';
 
 export interface Settings {
   shadows: ShadowQuality;
+  /** Edge smoothing (multisampling); 'auto' leaves it off on Retina-class screens. */
+  edges: EdgeSmoothing;
   dayNight: boolean;
   volume: number;
   muted: boolean;
@@ -43,6 +45,7 @@ const AUTOSAVE_SECONDS = 180;
 function loadSettings(): Settings {
   const defaults: Settings = {
     shadows: 'high',
+    edges: 'auto',
     dayNight: true,
     volume: 0.5,
     muted: false,
@@ -84,12 +87,12 @@ export class Game {
   constructor(app: HTMLElement) {
     const view = h('div', { id: 'view' });
     app.appendChild(view);
-    this.renderer = new GameRenderer(view);
+    this.renderer = new GameRenderer(view, this.settings.edges);
     this.tools = new ToolController(this);
     this.ui = new UI(this, app);
     // the menu lives inside the UI root so it scales with the interface
     this.menu = new Menu(this, this.ui.root);
-    this.input = new Input(this, this.renderer.canvas);
+    this.input = new Input(this, view);
     this.applySettings();
     // browsers only allow audio after a user gesture: start the music on the first one
     const unlock = () => {
@@ -450,6 +453,7 @@ export class Game {
   applySettings(): void {
     const s = this.settings;
     this.renderer.setShadows(s.shadows);
+    this.renderer.setEdges(s.edges);
     this.renderer.sky.enabled = s.dayNight;
     this.renderer.setGrid(s.grid);
     this.sfx.muted = s.muted;

@@ -196,5 +196,6 @@ export class Trains {
   dispose(): void {
     this.locos.geometry.dispose();
     this.wagons.geometry.dispose();
+    (this.locos.material as THREE.Material).dispose();
   }
 }
